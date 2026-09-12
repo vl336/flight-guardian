@@ -73,9 +73,21 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
+  --radius: 0.875rem;
+  --navy: oklch(0.245 0.05 265);
+  --sky: oklch(0.6 0.145 240);
+  --sky-soft: oklch(0.955 0.025 235);
+  --warning: oklch(0.77 0.15 76);
+  --warning-soft: oklch(0.965 0.045 90);
+  --danger: oklch(0.63 0.21 25);
+  --danger-soft: oklch(0.96 0.03 25);
+  --success: oklch(0.62 0.14 155);
+  --success-soft: oklch(0.96 0.04 155);
+  --gradient-hero: linear-gradient(160deg, oklch(0.245 0.05 265), oklch(0.32 0.09 255) 60%, oklch(0.42 0.13 240));
+  --shadow-card: 0 1px 2px oklch(0.245 0.05 265 / 6%), 0 12px 32px -12px oklch(0.245 0.05 265 / 18%);
+  --shadow-float: 0 18px 48px -18px oklch(0.245 0.05 265 / 32%);
+  --background: oklch(0.99 0.003 250);
+  --foreground: var(--navy);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.129 0.042 264.695);
   --popover: oklch(1 0 0);
