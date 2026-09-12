@@ -137,7 +137,7 @@ const normalize = (value: string) =>
 
 export function findFlight(query: string): Flight {
   const q = normalize(query);
-  if (!q) return FLIGHTS[0];
+  if (!q) return FLIGHTS[0]!;
   const byNumber = FLIGHTS.find((f) => normalize(f.flightNumber).startsWith(q) || f.id.toLowerCase() === q.replace(/\s/g, ""));
   if (byNumber) return byNumber;
   const byRoute = FLIGHTS.find((f) => {
@@ -145,7 +145,7 @@ export function findFlight(query: string): Flight {
     const codes = normalize(`${f.from.code} ${f.to.code}`);
     return route.includes(q) || q.includes(route) || codes.includes(q);
   });
-  return byRoute ?? FLIGHTS[0];
+  return byRoute ?? FLIGHTS[0]!;
 }
 
 export const LOADING_STEPS = [
