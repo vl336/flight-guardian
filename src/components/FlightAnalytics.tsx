@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   ArrowRight,
   ShieldCheck,
@@ -10,7 +10,10 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 import { RISK_LABEL, type Flight, type RiskLevel } from "@/lib/flight-data";
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const riskStyles: Record<
   RiskLevel,
