@@ -149,7 +149,7 @@ export function FlightAnalytics({ flight }: { flight: Flight }) {
 
         <button
           type="button"
-          onClick={() => setOpenFactors((v) => !v)}
+          onClick={() => setOpenFactors((v: boolean) => !v)}
           className="mt-5 flex w-full items-center justify-between gap-3 rounded-2xl bg-card px-4 py-3 text-left font-bold"
           aria-expanded={openFactors}
         >
