@@ -6,10 +6,27 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
+// GitHub Pages serves static files only, so that build drops the server: the
+// single route is prerendered to dist/client/index.html, nitro is skipped, and
+// assets are rebased onto the project-site subpath (e.g. /flight-guardian/).
+// Without GITHUB_PAGES=true nothing below changes — dev and Lovable builds
+// keep their normal SSR output.
+const isGitHubPages = process.env.GITHUB_PAGES === "true";
+const base = process.env.GITHUB_PAGES_BASE ?? "/";
+
 export default defineConfig({
+  vite: isGitHubPages ? { base } : {},
+  nitro: isGitHubPages ? false : undefined,
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
     server: { entry: "server" },
+    ...(isGitHubPages
+      ? {
+          router: { basepath: base },
+          prerender: { enabled: true, crawlLinks: false, autoStaticPathsDiscovery: false },
+          pages: [{ path: base, prerender: { enabled: true, outputPath: "/index.html" } }],
+        }
+      : {}),
   },
 });

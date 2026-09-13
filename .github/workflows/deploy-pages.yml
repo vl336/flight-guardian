@@ -1,0 +1,67 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a newer push cancel an in-flight deploy, but never run two at once.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      - name: Build static site
+        env:
+          GITHUB_PAGES: "true"
+          # Project site lives at https://<user>.github.io/<repo>/
+          GITHUB_PAGES_BASE: /${{ github.event.repository.name }}/
+        run: bun run build
+
+      - name: Add 404 fallback
+        # Pages serves 404.html for unknown paths. The prerendered index.html
+        # can't be reused there (its hydration state is bound to "/"), and the
+        # app has a single route, so send strays to the app root instead.
+        env:
+          BASE: /${{ github.event.repository.name }}/
+        run: |
+          cat > dist/client/404.html <<HTML
+          <!doctype html>
+          <meta charset="utf-8">
+          <title>FlightRisk</title>
+          <meta http-equiv="refresh" content="0; url=$BASE">
+          <script>location.replace("$BASE");</script>
+          <a href="$BASE">FlightRisk</a>
+          HTML
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/client
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
