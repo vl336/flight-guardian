@@ -6,9 +6,10 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
-// GitHub Pages serves static files only, so that build drops the server: the
-// single route is prerendered to dist/client/index.html, nitro is skipped, and
-// assets are rebased onto the project-site subpath (e.g. /flight-guardian/).
+// GitHub Pages serves static files only, so that build drops the server: every
+// static route is prerendered into dist/client ("/" -> index.html, "/about" ->
+// about/index.html, so direct links work), nitro is skipped, and assets are
+// rebased onto `base` — "/" on a custom domain, "/<repo>/" on a project site.
 // Without GITHUB_PAGES=true nothing below changes — dev and Lovable builds
 // keep their normal SSR output.
 const isGitHubPages = process.env.GITHUB_PAGES === "true";
@@ -24,8 +25,7 @@ export default defineConfig({
     ...(isGitHubPages
       ? {
           router: { basepath: base },
-          prerender: { enabled: true, crawlLinks: false, autoStaticPathsDiscovery: false },
-          pages: [{ path: base, prerender: { enabled: true, outputPath: "/index.html" } }],
+          prerender: { enabled: true },
         }
       : {}),
   },
