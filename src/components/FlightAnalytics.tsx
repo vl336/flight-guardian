@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   ArrowRight,
   ShieldCheck,
@@ -7,11 +6,7 @@ import {
   ChevronDown,
   Clock,
   CalendarClock,
-  Send,
 } from "lucide-react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { RISK_LABEL, type Flight, type RiskLevel } from "@/lib/flight-data";
 
 const riskStyles: Record<
