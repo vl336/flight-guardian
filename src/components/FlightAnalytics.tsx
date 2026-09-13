@@ -181,11 +181,29 @@ export function FlightAnalytics({ flight }: { flight: Flight }) {
           Хотите следить за изменением риска по этому рейсу?
         </h3>
         <p className="mt-2 text-sm text-primary-foreground/75">
-          Подписка на уведомления в Telegram или на email скоро появится.
+          Выберите удобный способ — подписка пока не активна, кнопки ведут на заглушки.
         </p>
-        <div className="mt-4 inline-flex w-full items-center gap-3 rounded-2xl bg-card px-4 py-3 text-sm font-bold text-primary-foreground/80 sm:w-auto">
-          <Clock className="h-4 w-4 shrink-0" />
-          Функция в разработке
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <Button
+            asChild
+            className="h-13 rounded-2xl bg-sky text-base font-bold hover:bg-sky/90"
+          >
+            <a
+              href="https://t.me/flightrisk_bot?start=alert"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Send className="mr-2 h-4 w-4" />
+              Подписаться в Telegram
+            </a>
+          </Button>
+          <Button
+            disabled
+            className="h-13 rounded-2xl bg-card text-base font-bold text-primary-foreground/70 hover:bg-card/90 disabled:opacity-60"
+          >
+            <Mail className="mr-2 h-4 w-4" />
+            Подписаться по email
+          </Button>
         </div>
       </div>
     </div>
