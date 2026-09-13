@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   ArrowRight,
   ShieldCheck,
@@ -10,7 +10,10 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 import { RISK_LABEL, type Flight, type RiskLevel } from "@/lib/flight-data";
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const riskStyles: Record<
   RiskLevel,
@@ -54,8 +57,23 @@ function Bar({ label, value, className }: { label: string; value: number; classN
 
 export function FlightAnalytics({ flight }: { flight: Flight }) {
   const [openFactors, setOpenFactors] = useState(true);
+  const [email, setEmail] = useState("");
+  const [touched, setTouched] = useState(false);
   const risk = riskStyles[flight.risk.level];
   const RiskIcon = risk.icon;
+
+  const isValidEmail = useMemo(() => emailRegex.test(email.trim()), [email]);
+  const showError = touched && email.length > 0 && !isValidEmail;
+
+  const handleSubscribe = () => {
+    const clean = email.trim();
+    if (!emailRegex.test(clean)) return;
+    toast.success("Успешно подписались", {
+      description: `Если узнаем что-то новое по рейсу ${flight.flightNumber}, напишем вам на ${clean}.`,
+    });
+    setEmail("");
+    setTouched(false);
+  };
 
   return (
     <div className="space-y-4">
@@ -185,17 +203,27 @@ export function FlightAnalytics({ flight }: { flight: Flight }) {
         <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
           <Input
             type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onBlur={() => setTouched(true)}
             placeholder="Введите ваш email"
             aria-label="Email для подписки"
-            className="h-13 rounded-2xl border-transparent bg-card text-base"
+            aria-invalid={showError}
+            className="h-13 rounded-2xl border-transparent bg-card text-base text-foreground placeholder:text-muted-foreground"
           />
           <Button
-            disabled
+            disabled={!isValidEmail}
+            onClick={handleSubscribe}
             className="h-13 rounded-2xl bg-sky text-base font-bold hover:bg-sky/90 disabled:opacity-60"
           >
             Подписаться
           </Button>
         </div>
+        {showError && (
+          <p className="mt-2 text-sm font-semibold text-danger">
+            Введите корректный email, например name@example.com
+          </p>
+        )}
         <div className="mt-4 rounded-2xl bg-card/10 p-4 text-sm">
           <p className="font-semibold text-primary-foreground">Telegram-бот</p>
           <p className="mt-1 text-primary-foreground/75">
