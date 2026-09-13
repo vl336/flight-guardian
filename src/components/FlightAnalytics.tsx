@@ -52,21 +52,8 @@ function Bar({ label, value, className }: { label: string; value: number; classN
 
 export function FlightAnalytics({ flight }: { flight: Flight }) {
   const [openFactors, setOpenFactors] = useState(true);
-  const [contact, setContact] = useState("");
-  const [subscribed, setSubscribed] = useState(false);
   const risk = riskStyles[flight.risk.level];
   const RiskIcon = risk.icon;
-
-  const subscribe = () => {
-    if (!contact.trim()) {
-      toast.error("Укажите Telegram-ник или email");
-      return;
-    }
-    setSubscribed(true);
-    toast.success("Подписка оформлена", {
-      description: `Пришлём алерт по рейсу ${flight.flightNumber}`,
-    });
-  };
 
   return (
     <div className="space-y-4">
