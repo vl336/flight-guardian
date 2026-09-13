@@ -7,10 +7,9 @@ import {
   ChevronDown,
   Clock,
   CalendarClock,
-  Send,
-  Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { RISK_LABEL, type Flight, type RiskLevel } from "@/lib/flight-data";
 
 const riskStyles: Record<
