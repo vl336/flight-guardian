@@ -203,17 +203,27 @@ export function FlightAnalytics({ flight }: { flight: Flight }) {
         <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
           <Input
             type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onBlur={() => setTouched(true)}
             placeholder="Введите ваш email"
             aria-label="Email для подписки"
-            className="h-13 rounded-2xl border-transparent bg-card text-base"
+            aria-invalid={showError}
+            className="h-13 rounded-2xl border-transparent bg-card text-base text-foreground placeholder:text-muted-foreground"
           />
           <Button
-            disabled
+            disabled={!isValidEmail}
+            onClick={handleSubscribe}
             className="h-13 rounded-2xl bg-sky text-base font-bold hover:bg-sky/90 disabled:opacity-60"
           >
             Подписаться
           </Button>
         </div>
+        {showError && (
+          <p className="mt-2 text-sm font-semibold text-danger">
+            Введите корректный email, например name@example.com
+          </p>
+        )}
         <div className="mt-4 rounded-2xl bg-card/10 p-4 text-sm">
           <p className="font-semibold text-primary-foreground">Telegram-бот</p>
           <p className="mt-1 text-primary-foreground/75">
