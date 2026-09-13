@@ -57,8 +57,23 @@ function Bar({ label, value, className }: { label: string; value: number; classN
 
 export function FlightAnalytics({ flight }: { flight: Flight }) {
   const [openFactors, setOpenFactors] = useState(true);
+  const [email, setEmail] = useState("");
+  const [touched, setTouched] = useState(false);
   const risk = riskStyles[flight.risk.level];
   const RiskIcon = risk.icon;
+
+  const isValidEmail = useMemo(() => emailRegex.test(email.trim()), [email]);
+  const showError = touched && email.length > 0 && !isValidEmail;
+
+  const handleSubscribe = () => {
+    const clean = email.trim();
+    if (!emailRegex.test(clean)) return;
+    toast.success("Успешно подписались", {
+      description: `Если узнаем что-то новое по рейсу ${flight.flightNumber}, напишем вам на ${clean}.`,
+    });
+    setEmail("");
+    setTouched(false);
+  };
 
   return (
     <div className="space-y-4">
