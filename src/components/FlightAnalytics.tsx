@@ -196,6 +196,20 @@ export function FlightAnalytics({ flight }: { flight: Flight }) {
             Подписаться
           </Button>
         </div>
+        <div className="mt-4 rounded-2xl bg-card/10 p-4 text-sm">
+          <p className="font-semibold text-primary-foreground">Telegram-бот</p>
+          <p className="mt-1 text-primary-foreground/75">
+            Удобнее в Telegram — бот пришлёт алерт, если задержка начнёт расти.
+          </p>
+          <a
+            href="https://t.me/riskbotair"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 inline-block font-bold text-sky hover:underline"
+          >
+            @riskbotair →
+          </a>
+        </div>
       </div>
     </div>
   );
