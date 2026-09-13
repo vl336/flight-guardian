@@ -18,6 +18,12 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # Set the repository variable PAGES_CUSTOM_DOMAIN (Settings -> Secrets and
+      # variables -> Actions -> Variables) to serve the site from a custom domain.
+      # Unset: project site at https://<user>.github.io/<repo>/.
+      CUSTOM_DOMAIN: ${{ vars.PAGES_CUSTOM_DOMAIN }}
+      BASE: ${{ vars.PAGES_CUSTOM_DOMAIN != '' && '/' || format('/{0}/', github.event.repository.name) }}
     steps:
       - uses: actions/checkout@v5
 
@@ -30,16 +36,13 @@ jobs:
       - name: Build static site
         env:
           GITHUB_PAGES: "true"
-          # Project site lives at https://<user>.github.io/<repo>/
-          GITHUB_PAGES_BASE: /${{ github.event.repository.name }}/
+          GITHUB_PAGES_BASE: ${{ env.BASE }}
         run: bun run build
 
       - name: Add 404 fallback
         # Pages serves 404.html for unknown paths. The prerendered index.html
         # can't be reused there (its hydration state is bound to "/"), and the
         # app has a single route, so send strays to the app root instead.
-        env:
-          BASE: /${{ github.event.repository.name }}/
         run: |
           cat > dist/client/404.html <<HTML
           <!doctype html>
@@ -49,6 +52,12 @@ jobs:
           <script>location.replace("$BASE");</script>
           <a href="$BASE">FlightRisk</a>
           HTML
+
+      - name: Add CNAME
+        # Keeps the custom domain attached to every deploy — Pages drops a domain
+        # whose CNAME file is missing from the published artifact.
+        if: env.CUSTOM_DOMAIN != ''
+        run: echo "$CUSTOM_DOMAIN" > dist/client/CNAME
 
       - uses: actions/configure-pages@v5
 
