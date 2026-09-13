@@ -7,11 +7,7 @@ import {
   ChevronDown,
   Clock,
   CalendarClock,
-  Send,
 } from "lucide-react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { RISK_LABEL, type Flight, type RiskLevel } from "@/lib/flight-data";
 
 const riskStyles: Record<
@@ -56,21 +52,8 @@ function Bar({ label, value, className }: { label: string; value: number; classN
 
 export function FlightAnalytics({ flight }: { flight: Flight }) {
   const [openFactors, setOpenFactors] = useState(true);
-  const [contact, setContact] = useState("");
-  const [subscribed, setSubscribed] = useState(false);
   const risk = riskStyles[flight.risk.level];
   const RiskIcon = risk.icon;
-
-  const subscribe = () => {
-    if (!contact.trim()) {
-      toast.error("Укажите Telegram-ник или email");
-      return;
-    }
-    setSubscribed(true);
-    toast.success("Подписка оформлена", {
-      description: `Пришлём алерт по рейсу ${flight.flightNumber}`,
-    });
-  };
 
   return (
     <div className="space-y-4">
@@ -166,7 +149,7 @@ export function FlightAnalytics({ flight }: { flight: Flight }) {
 
         <button
           type="button"
-          onClick={() => setOpenFactors((v) => !v)}
+          onClick={() => setOpenFactors((v: boolean) => !v)}
           className="mt-5 flex w-full items-center justify-between gap-3 rounded-2xl bg-card px-4 py-3 text-left font-bold"
           aria-expanded={openFactors}
         >
@@ -195,31 +178,12 @@ export function FlightAnalytics({ flight }: { flight: Flight }) {
           Хотите следить за изменением риска по этому рейсу?
         </h3>
         <p className="mt-2 text-sm text-primary-foreground/75">
-          Мы вышлем уведомление в Telegram, если самолёт задержится в предыдущем городе.
+          Подписка на уведомления в Telegram или на email скоро появится.
         </p>
-        {subscribed ? (
-          <p className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-success-soft px-4 py-3 text-sm font-bold text-success">
-            <ShieldCheck className="h-4 w-4 shrink-0" />
-            Готово! Следим за рейсом {flight.flightNumber}
-          </p>
-        ) : (
-          <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
-            <Input
-              value={contact}
-              onChange={(e) => setContact(e.target.value)}
-              placeholder="@username или email"
-              aria-label="Telegram или email"
-              className="h-13 rounded-2xl border-transparent bg-card text-base"
-            />
-            <Button
-              onClick={subscribe}
-              className="h-13 rounded-2xl bg-sky text-base font-bold hover:bg-sky/90"
-            >
-              <Send className="mr-1 h-4 w-4" />
-              Подписаться на риск-алерты
-            </Button>
-          </div>
-        )}
+        <div className="mt-4 inline-flex w-full items-center gap-3 rounded-2xl bg-card px-4 py-3 text-sm font-bold text-primary-foreground/80 sm:w-auto">
+          <Clock className="h-4 w-4 shrink-0" />
+          Функция в разработке
+        </div>
       </div>
     </div>
   );
