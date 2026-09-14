@@ -164,6 +164,13 @@ export function findFlight(query: string): Flight {
   return byRoute ?? FLIGHTS[0]!;
 }
 
+export function findFlights(from: string, to: string): Flight[] {
+  const matches = FLIGHTS.filter(
+    (f) => (!from || f.from.city === from) && (!to || f.to.city === to),
+  );
+  return matches.length > 0 ? matches : FLIGHTS;
+}
+
 export const LOADING_STEPS = [
   "Анализируем маршрут борта...",
   "Проверяем метеоусловия...",
