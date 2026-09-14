@@ -83,21 +83,18 @@ export function FlightAnalytics({ flight }: { flight: Flight }) {
             <p className="text-xs font-semibold tracking-widest text-primary-foreground/60 uppercase">
               {flight.airline}
             </p>
-            <h2 className="mt-1 flex min-w-0 items-center gap-2 text-xl font-extrabold sm:text-2xl">
-              <span className="truncate">{flight.flightNumber}</span>
-              <span className="hidden text-primary-foreground/40 sm:inline">·</span>
-              <span className="hidden items-center gap-1.5 sm:flex">
-                {flight.from.code} <ArrowRight className="h-4 w-4" /> {flight.to.code}
-              </span>
+            <h2 className="mt-1 truncate text-xl font-extrabold sm:text-2xl">
+              {flight.flightNumber}
             </h2>
-            <p className="mt-1 truncate text-sm text-primary-foreground/70">
-              {flight.from.city} — {flight.to.city}
+            <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-sm text-primary-foreground/70">
+              <span>{flight.from.city}</span>
+              <ArrowRight className="h-3.5 w-3.5 shrink-0" />
+              <span>{flight.to.city}</span>
             </p>
           </div>
           <div className="shrink-0 text-right">
             <p className="text-xs text-primary-foreground/60">По расписанию</p>
             <p className="text-2xl font-extrabold">{flight.departure}</p>
-            <p className="text-xs text-primary-foreground/60">прилёт {flight.arrival}</p>
           </div>
         </div>
 
@@ -121,7 +118,11 @@ export function FlightAnalytics({ flight }: { flight: Flight }) {
               </div>
             </div>
             <div className="space-y-3">
-              <Bar label="Вовремя" value={flight.history.distribution.onTime} className="bg-success" />
+              <Bar
+                label="Вовремя"
+                value={flight.history.distribution.onTime}
+                className="bg-success"
+              />
               <Bar
                 label="Задержка 15–60 мин"
                 value={flight.history.distribution.medium}
@@ -185,7 +186,9 @@ export function FlightAnalytics({ flight }: { flight: Flight }) {
                 key={f.text}
                 className="flex items-start gap-3 rounded-2xl bg-card px-4 py-3 text-sm"
               >
-                <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${dotColor[f.severity]}`} />
+                <span
+                  className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${dotColor[f.severity]}`}
+                />
                 <span className="min-w-0">{f.text}</span>
               </li>
             ))}

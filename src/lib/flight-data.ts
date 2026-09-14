@@ -12,9 +12,8 @@ export type Flight = {
   flightNumber: string;
   airline: string;
   from: { city: string; code: string };
-  to: { city: string; code: string };
+  to: { city: string };
   departure: string;
-  arrival: string;
   history: {
     score: number;
     onTimeRate: number;
@@ -37,9 +36,8 @@ export const FLIGHTS: Flight[] = [
     flightNumber: "SU 1402",
     airline: "Аэрофлот",
     from: { city: "Москва", code: "SVO" },
-    to: { city: "Казань", code: "KZN" },
+    to: { city: "Казань" },
     departure: "18:40",
-    arrival: "20:25",
     history: {
       score: 7.2,
       onTimeRate: 68,
@@ -73,9 +71,8 @@ export const FLIGHTS: Flight[] = [
     flightNumber: "S7 2054",
     airline: "S7 Airlines",
     from: { city: "Сочи", code: "AER" },
-    to: { city: "Москва", code: "DME" },
+    to: { city: "Москва" },
     departure: "09:15",
-    arrival: "11:45",
     history: {
       score: 8.6,
       onTimeRate: 84,
@@ -99,9 +96,8 @@ export const FLIGHTS: Flight[] = [
     flightNumber: "DP 405",
     airline: "Победа",
     from: { city: "Москва", code: "VKO" },
-    to: { city: "Санкт-Петербург", code: "LED" },
+    to: { city: "Санкт-Петербург" },
     departure: "21:50",
-    arrival: "23:10",
     history: {
       score: 4.1,
       onTimeRate: 47,
@@ -164,7 +160,7 @@ export function findFlight(query: string): Flight {
   if (byNumber) return byNumber;
   const byRoute = FLIGHTS.find((f) => {
     const route = normalize(`${f.from.city} ${f.to.city}`);
-    const codes = normalize(`${f.from.code} ${f.to.code}`);
+    const codes = normalize(f.from.code);
     return route.includes(q) || q.includes(route) || codes.includes(q);
   });
   return byRoute ?? FLIGHTS[0]!;
@@ -212,11 +208,8 @@ export function toAnalyticsFlight(flight: FoundFlight): Flight {
     flightNumber: flight.number,
     airline: flight.carrier,
     from: { city: flight.city, code: flight.airport },
-    // The API names the arrival city but carries no arrival airport code and
-    // no arrival time, so the city stands in for the code and arrival is blank.
-    to: { city: destination, code: destination },
+    to: { city: destination },
     departure: formatTime(flight.scheduledLocalTime),
-    arrival: "—",
     ...PLACEHOLDER_ANALYTICS,
   };
 }
