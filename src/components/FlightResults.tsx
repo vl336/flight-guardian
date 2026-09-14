@@ -1,65 +1,40 @@
-import { ArrowRight, SearchX } from "lucide-react";
-import { format, parseISO } from "date-fns";
-import { ru } from "date-fns/locale";
-import {
-  formatTime,
-  STATUS_LABEL,
-  terminalOf,
-  type FoundFlight,
-  type SearchParams,
-} from "@/lib/api";
-import type { FlightDayStatus } from "@/lib/graphql-types";
+import { ChevronRight, Plane } from "lucide-react";
+import { formatTime, STATUS_LABEL, STATUS_STYLES, terminalOf, type FoundFlight } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-const statusStyles: Record<FlightDayStatus, string> = {
-  SCHEDULED: "bg-sky-soft text-accent-foreground",
-  COMPLETED: "bg-success-soft text-success",
-  REMOVED_FROM_SCHEDULE: "bg-danger-soft text-danger",
-  REMOVED_LONG_BEFORE: "bg-danger-soft text-danger",
-  UNKNOWN: "bg-secondary text-muted-foreground",
-};
-
 type Props = {
-  params: SearchParams;
+  route: string;
   result: { totalCount: number; items: FoundFlight[] };
+  onSelect: (flight: FoundFlight) => void;
 };
 
-export function FlightResults({ params, result }: Props) {
-  const when = format(parseISO(params.date), "d MMMM", { locale: ru });
-
+export function FlightResults({ route, result, onSelect }: Props) {
   if (result.items.length === 0) {
     return (
-      <div className="grid place-items-center gap-3 rounded-3xl bg-card p-12 text-center shadow-card">
-        <SearchX className="h-8 w-8 text-muted-foreground" />
-        <p className="font-semibold">
-          {params.from} — {params.to}: на {when} рейсов не нашлось
+      <div className="rounded-3xl bg-card p-12 text-center shadow-card">
+        <p className="font-semibold">По маршруту {route} на эту дату рейсов не нашлось</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Попробуйте другую дату или направление.
         </p>
-        <p className="text-sm text-muted-foreground">Попробуйте другую дату или направление.</p>
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-3xl bg-card shadow-card">
-      <div className="border-b border-border bg-navy p-5 text-primary-foreground">
-        <h2 className="flex min-w-0 flex-wrap items-center gap-2 text-xl font-extrabold sm:text-2xl">
-          <span className="truncate">{params.from}</span>
-          <ArrowRight className="h-5 w-5 shrink-0" />
-          <span className="truncate">{params.to}</span>
-        </h2>
-        <p className="mt-1 text-sm text-primary-foreground/70">
-          {when} · найдено {result.totalCount} {result.totalCount === 1 ? "рейс" : "рейсов"}
-        </p>
-      </div>
-
-      <ul className="divide-y divide-border">
+    <div className="rounded-3xl bg-card p-4 shadow-card sm:p-5">
+      <p className="text-sm text-muted-foreground">
+        Рейсы по маршруту {route} — найдено {result.totalCount}. Выберите рейс, чтобы увидеть
+        детали.
+      </p>
+      <ul className="mt-4 grid gap-3">
         {result.items.map((flight) => (
-          <FlightRow key={flight.id} flight={flight} />
+          <li key={flight.id}>
+            <FlightRow flight={flight} onSelect={onSelect} />
+          </li>
         ))}
       </ul>
-
       {result.totalCount > result.items.length && (
-        <p className="border-t border-border px-5 py-3 text-center text-xs text-muted-foreground">
+        <p className="mt-4 text-center text-xs text-muted-foreground">
           Показаны первые {result.items.length} рейсов из {result.totalCount}
         </p>
       )}
@@ -67,50 +42,52 @@ export function FlightResults({ params, result }: Props) {
   );
 }
 
-function FlightRow({ flight }: { flight: FoundFlight }) {
+function FlightRow({
+  flight,
+  onSelect,
+}: {
+  flight: FoundFlight;
+  onSelect: (flight: FoundFlight) => void;
+}) {
   const terminal = terminalOf(flight.terminal);
   // shiftMinutes is how far the airline has moved the flight since it first
   // published it — the only delay signal the schedule actually carries.
   const shift = flight.shiftMinutes;
 
   return (
-    <li className="grid grid-cols-[auto_minmax(0,1fr)] gap-4 p-4 sm:gap-5 sm:p-5">
-      <div className="w-16 shrink-0 text-right sm:w-20">
-        <p className="text-xl font-extrabold tabular-nums sm:text-2xl">
-          {formatTime(flight.scheduledLocalTime)}
-        </p>
-        {shift !== 0 && (
-          <p className={cn("text-xs font-bold", shift > 0 ? "text-danger" : "text-success")}>
-            {shift > 0 ? `+${shift}` : shift} мин
-          </p>
+    <button
+      type="button"
+      onClick={() => onSelect(flight)}
+      className="flex w-full items-center gap-3 rounded-2xl border border-border p-3 text-left transition-colors hover:bg-accent"
+    >
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-secondary">
+        <Plane className="h-4 w-4 text-sky" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-bold">
+          {flight.carrier} · {flight.number}
+        </span>
+        <span className="block truncate text-xs text-muted-foreground">
+          {formatTime(flight.scheduledLocalTime)} · {flight.airport}
+          {terminal && ` терминал ${terminal}`} → {flight.destination}
+        </span>
+      </span>
+      {shift !== 0 && (
+        <span
+          className={cn("shrink-0 text-xs font-bold", shift > 0 ? "text-danger" : "text-success")}
+        >
+          {shift > 0 ? `+${shift}` : shift} мин
+        </span>
+      )}
+      <span
+        className={cn(
+          "hidden shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold sm:inline",
+          STATUS_STYLES[flight.status],
         )}
-      </div>
-
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="font-bold">{flight.number}</span>
-          <span className="min-w-0 truncate text-sm text-muted-foreground">{flight.carrier}</span>
-          <span
-            className={cn(
-              "shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold",
-              statusStyles[flight.status],
-            )}
-          >
-            {STATUS_LABEL[flight.status]}
-          </span>
-        </div>
-
-        <p className="mt-1 truncate text-sm text-muted-foreground">
-          {flight.airport}
-          {terminal && ` · терминал ${terminal}`} → {flight.destination}
-        </p>
-
-        {shift !== 0 && (
-          <p className="mt-1 text-xs text-muted-foreground">
-            В расписании изначально {formatTime(flight.firstLocalTime)}
-          </p>
-        )}
-      </div>
-    </li>
+      >
+        {STATUS_LABEL[flight.status]}
+      </span>
+      <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+    </button>
   );
 }

@@ -60,6 +60,10 @@ const FLIGHTS_QUERY = `query Flights($from: String, $to: String, $date: LocalDat
       shiftMinutes
       terminal
       status
+      localDate
+      aircraftType
+      observationCount
+      lastSeenAtUtc
     }
   }
 }`;
@@ -104,6 +108,10 @@ export type FoundFlight = Pick<
   | "shiftMinutes"
   | "terminal"
   | "status"
+  | "localDate"
+  | "aircraftType"
+  | "observationCount"
+  | "lastSeenAtUtc"
 >;
 
 export type SearchParams = { from: string; to: string; date: LocalDate };
@@ -131,6 +139,15 @@ export const STATUS_LABEL: Record<FlightDayStatus, string> = {
   REMOVED_FROM_SCHEDULE: "Снят с расписания",
   REMOVED_LONG_BEFORE: "Снят заранее",
   UNKNOWN: "Нет данных",
+};
+
+/** Badge colours per status, kept beside the labels so they stay in step. */
+export const STATUS_STYLES: Record<FlightDayStatus, string> = {
+  SCHEDULED: "bg-sky-soft text-accent-foreground",
+  COMPLETED: "bg-success-soft text-success",
+  REMOVED_FROM_SCHEDULE: "bg-danger-soft text-danger",
+  REMOVED_LONG_BEFORE: "bg-danger-soft text-danger",
+  UNKNOWN: "bg-secondary text-muted-foreground",
 };
 
 const pad = (value: number) => String(value).padStart(2, "0");

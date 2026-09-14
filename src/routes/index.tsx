@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Radar, Search, TriangleAlert } from "lucide-react";
+import { Radar, Loader2, ArrowLeft, Search, TriangleAlert } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { SearchWidget } from "@/components/SearchWidget";
 import { FlightResults } from "@/components/FlightResults";
-import { AlertsSubscribe } from "@/components/AlertsSubscribe";
-import { fetchFlights, type SearchParams } from "@/lib/api";
+import { FlightDetails } from "@/components/FlightDetails";
+import { FlightAnalytics } from "@/components/FlightAnalytics";
+import { FLIGHTS } from "@/lib/flight-data";
+import { fetchFlights, type FoundFlight, type SearchParams } from "@/lib/api";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -31,6 +34,7 @@ export const Route = createFileRoute("/")({
 function Index() {
   // Set only when the user submits the form, so nothing is fetched before that.
   const [params, setParams] = useState<SearchParams | null>(null);
+  const [flight, setFlight] = useState<FoundFlight | null>(null);
 
   const flights = useQuery({
     queryKey: ["flights", params],
@@ -38,6 +42,14 @@ function Index() {
     enabled: params !== null,
     staleTime: 60 * 1000,
   });
+
+  const loading = params !== null && flights.isFetching;
+  const route = params ? `${params.from} → ${params.to}` : "";
+
+  const handleSearch = (next: SearchParams) => {
+    setFlight(null);
+    setParams(next);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -67,26 +79,57 @@ function Index() {
       </section>
 
       <main className="mx-auto -mt-16 max-w-3xl px-4 pb-16">
-        <SearchWidget onSearch={setParams} searching={flights.isFetching} />
+        <SearchWidget onSearch={handleSearch} loading={loading} />
 
-        <div className="mt-6 space-y-4">
+        <div className="mt-6">
           {params === null ? (
             <Placeholder />
-          ) : flights.isPending || flights.isFetching ? (
-            <Loading />
+          ) : loading ? (
+            <div className="grid place-items-center gap-3 rounded-3xl bg-card p-12 text-center shadow-card">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="font-semibold">Ищем рейсы...</p>
+            </div>
           ) : flights.isError ? (
             <Failed message={flights.error.message} onRetry={() => flights.refetch()} />
-          ) : (
-            <FlightResults params={params} result={flights.data} />
-          )}
-
-          <AlertsSubscribe params={params} />
+          ) : flight ? (
+            <div className="grid gap-4">
+              <Button
+                variant="ghost"
+                onClick={() => setFlight(null)}
+                className="w-fit rounded-2xl font-semibold"
+              >
+                <ArrowLeft className="mr-1 h-4 w-4" />
+                Назад к списку рейсов
+              </Button>
+              <FlightDetails flight={flight} />
+              <DemoAnalytics />
+            </div>
+          ) : flights.data ? (
+            <FlightResults route={route} result={flights.data} onSelect={setFlight} />
+          ) : null}
         </div>
       </main>
 
       <footer className="border-t border-border px-4 py-8 text-center text-xs text-muted-foreground">
         Данные носят аналитический характер и не являются официальной информацией перевозчика.
       </footer>
+    </div>
+  );
+}
+
+/**
+ * The schedule API returns times and statuses but no punctuality history or
+ * risk score, so the analytics card stays the mock prototype from the branch.
+ * It is labelled as a demo rather than dressed up as this flight's numbers.
+ */
+function DemoAnalytics() {
+  return (
+    <div className="grid gap-3">
+      <div className="rounded-2xl bg-warning-soft px-4 py-3 text-sm font-semibold text-warning">
+        Ниже — демонстрация будущей аналитики риска на примере рейса SU 1402. API расписаний пока не
+        отдаёт историю пунктуальности и прогноз задержки.
+      </div>
+      <FlightAnalytics flight={FLIGHTS[0]!} />
     </div>
   );
 }
@@ -100,15 +143,6 @@ function Placeholder() {
         Покажем все рейсы по направлению и то, насколько их уже сдвинули от первоначального
         расписания.
       </p>
-    </div>
-  );
-}
-
-function Loading() {
-  return (
-    <div className="grid place-items-center gap-3 rounded-3xl bg-card p-12 text-center shadow-card">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      <p className="font-semibold">Ищем рейсы...</p>
     </div>
   );
 }
