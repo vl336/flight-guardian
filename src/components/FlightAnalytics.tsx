@@ -238,6 +238,20 @@ export function FlightAnalytics({ flight }: { flight: Flight }) {
             @riskbotair →
           </a>
         </div>
+        <div className="mt-3 rounded-2xl bg-card/10 p-4 text-sm">
+          <p className="font-semibold text-primary-foreground">Мессенджер Макс</p>
+          <p className="mt-1 text-primary-foreground/75">
+            Подписывайтесь в Макс — получайте уведомления, если рейс начнёт задерживаться.
+          </p>
+          <a
+            href="https://max.ru/riskbotair"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 inline-block font-bold text-sky hover:underline"
+          >
+            @riskbotair в Макс →
+          </a>
+        </div>
       </div>
     </div>
   );
