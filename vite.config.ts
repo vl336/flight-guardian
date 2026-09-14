@@ -12,12 +12,12 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 // rebased onto `base` — "/" on a custom domain, "/<repo>/" on a project site.
 // Without GITHUB_PAGES=true nothing below changes — dev and Lovable builds
 // keep their normal SSR output.
-const isGitHubPages = process.env.GITHUB_PAGES === "true";
-const base = process.env.GITHUB_PAGES_BASE ?? "/";
+const isGitHubPages = process.env["GITHUB_PAGES"] === "true";
+const base = process.env["GITHUB_PAGES_BASE"] ?? "/";
 
 export default defineConfig({
   vite: isGitHubPages ? { base } : {},
-  nitro: isGitHubPages ? false : undefined,
+  ...(isGitHubPages ? { nitro: false } : {}),
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
