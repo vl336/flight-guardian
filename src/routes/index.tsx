@@ -5,7 +5,6 @@ import { Radar, Loader2, ArrowLeft, Search, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchWidget } from "@/components/SearchWidget";
 import { FlightResults } from "@/components/FlightResults";
-import { FlightDetails } from "@/components/FlightDetails";
 import { FlightAnalytics } from "@/components/FlightAnalytics";
 import { toAnalyticsFlight } from "@/lib/flight-data";
 import { fetchFlights, type FoundFlight, type SearchParams } from "@/lib/api";
@@ -102,7 +101,6 @@ function Index() {
                 Назад к списку рейсов
               </Button>
               <FlightAnalytics flight={toAnalyticsFlight(flight)} />
-              <FlightDetails flight={flight} />
             </div>
           ) : flights.data ? (
             <FlightResults route={route} result={flights.data} onSelect={setFlight} />

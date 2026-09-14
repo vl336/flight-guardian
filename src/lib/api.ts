@@ -60,10 +60,6 @@ const FLIGHTS_QUERY = `query Flights($from: String, $to: String, $date: LocalDat
       shiftMinutes
       terminal
       status
-      localDate
-      aircraftType
-      observationCount
-      lastSeenAtUtc
     }
   }
 }`;
@@ -108,10 +104,6 @@ export type FoundFlight = Pick<
   | "shiftMinutes"
   | "terminal"
   | "status"
-  | "localDate"
-  | "aircraftType"
-  | "observationCount"
-  | "lastSeenAtUtc"
 >;
 
 export type SearchParams = { from: string; to: string; date: LocalDate };
