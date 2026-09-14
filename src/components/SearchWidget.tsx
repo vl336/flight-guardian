@@ -1,8 +1,15 @@
 import { useState } from "react";
-import { Plane, Search, CalendarDays } from "lucide-react";
+import { Plane, Search, CalendarDays, PlaneTakeoff, PlaneLanding } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SUGGESTIONS } from "@/lib/flight-data";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { SUGGESTIONS, AIRPORTS } from "@/lib/flight-data";
 
 type Props = {
   onSearch: (query: string) => void;
@@ -14,6 +21,8 @@ const today = new Date().toISOString().slice(0, 10);
 export function SearchWidget({ onSearch, loading }: Props) {
   const [query, setQuery] = useState("");
   const [date, setDate] = useState(today);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [open, setOpen] = useState(false);
 
   const filtered = SUGGESTIONS.filter((s) =>
@@ -22,18 +31,65 @@ export function SearchWidget({ onSearch, loading }: Props) {
 
   const submit = (value?: string) => {
     setOpen(false);
-    onSearch(value ?? query);
+    const flight = (value ?? query).trim();
+    if (flight) {
+      onSearch(flight);
+      return;
+    }
+    if (from && to) {
+      onSearch(`${from} ${to}`);
+      return;
+    }
+    onSearch("");
   };
 
   return (
     <div className="rounded-3xl bg-card p-4 shadow-float sm:p-5">
       <form
-        className="grid gap-3 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)]"
+        className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
         onSubmit={(e) => {
           e.preventDefault();
           submit();
         }}
       >
+        <div className="relative">
+          <PlaneTakeoff className="pointer-events-none absolute top-1/2 left-3 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Select value={from} onValueChange={setFrom}>
+            <SelectTrigger
+              aria-label="Аэропорт вылета"
+              className="h-14 rounded-2xl border-border bg-secondary/60 pl-9 text-base"
+            >
+              <SelectValue placeholder="Аэропорт вылета" />
+            </SelectTrigger>
+            <SelectContent>
+              {AIRPORTS.map((a) => (
+                <SelectItem key={`from-${a.code}`} value={a.code}>
+                  {a.city} · {a.name} ({a.code})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="relative">
+          <PlaneLanding className="pointer-events-none absolute top-1/2 left-3 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Select value={to} onValueChange={setTo}>
+            <SelectTrigger
+              aria-label="Аэропорт прилёта"
+              className="h-14 rounded-2xl border-border bg-secondary/60 pl-9 text-base"
+            >
+              <SelectValue placeholder="Аэропорт прилёта" />
+            </SelectTrigger>
+            <SelectContent>
+              {AIRPORTS.map((a) => (
+                <SelectItem key={`to-${a.code}`} value={a.code}>
+                  {a.city} · {a.name} ({a.code})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="relative">
           <Plane className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -44,9 +100,9 @@ export function SearchWidget({ onSearch, loading }: Props) {
             }}
             onFocus={() => setOpen(true)}
             onBlur={() => window.setTimeout(() => setOpen(false), 150)}
-            placeholder="Номер рейса или маршрут"
-            aria-label="Номер рейса или маршрут"
-            className="h-14 rounded-2xl border-border bg-secondary/60 pl-9 text-base"
+            placeholder="Номер рейса"
+            aria-label="Номер рейса"
+            className="h-14 rounded-2xl border-border bg-secondary/60 pl-9 text-base text-foreground"
           />
           {open && filtered.length > 0 && (
             <ul className="absolute top-16 z-20 w-full overflow-hidden rounded-2xl border border-border bg-popover shadow-float">
@@ -76,15 +132,16 @@ export function SearchWidget({ onSearch, loading }: Props) {
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            aria-label="Дата рейса"
-            className="h-14 rounded-2xl border-border bg-secondary/60 pl-9 text-base"
+            aria-label="Дата вылета"
+            title="Дата вылета"
+            className="h-14 rounded-2xl border-border bg-secondary/60 pl-9 text-base text-foreground"
           />
         </div>
 
         <Button
           type="submit"
           disabled={loading}
-          className="h-14 rounded-2xl text-base font-bold sm:col-span-2"
+          className="h-14 rounded-2xl text-base font-bold sm:col-span-2 lg:col-span-4"
         >
           <Search className="mr-1 h-5 w-5" />
           {loading ? "Анализируем..." : "Посмотреть аналитику рейса"}
