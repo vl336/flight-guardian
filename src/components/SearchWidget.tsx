@@ -118,10 +118,17 @@ export function SearchWidget({ onSearch, loading }: Props) {
                       setQuery(s.label);
                       submit(s.label);
                     }}
-                    className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-accent"
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-accent"
                   >
-                    <span className="min-w-0 truncate text-sm font-semibold">{s.label}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">{s.hint}</span>
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary">
+                      <Plane className="h-4 w-4 text-sky" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-semibold">
+                        {s.airline} · {s.label}
+                      </div>
+                      <div className="truncate text-xs text-muted-foreground">{s.route}</div>
+                    </div>
                   </button>
                 </li>
               ))}
