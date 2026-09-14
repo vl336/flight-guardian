@@ -7,7 +7,7 @@ import type {
 } from "./graphql-types";
 
 /** Flight schedule API. It allows any origin, so the browser calls it directly. */
-export const GRAPHQL_ENDPOINT = "http://80.78.242.113/graphql/";
+export const GRAPHQL_ENDPOINT = "https://api.airrisk.ru/graphql/";
 
 type GraphQLResponse<T> = { data?: T; errors?: Array<{ message: string }> };
 
