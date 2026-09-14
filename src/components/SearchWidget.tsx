@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SUGGESTIONS, AIRPORTS } from "@/lib/flight-data";
+import { SUGGESTIONS, CITIES } from "@/lib/flight-data";
 
 type Props = {
   onSearch: (query: string) => void;
