@@ -29,26 +29,32 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const [flight, setFlight] = useState<Flight>(FLIGHTS[0]!);
+  const [results, setResults] = useState<Flight[] | null>(null);
+  const [flight, setFlight] = useState<Flight | null>(FLIGHTS[0]!);
+  const [route, setRoute] = useState("");
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(0);
   const timers = useRef<number[]>([]);
 
   useEffect(() => () => timers.current.forEach(window.clearTimeout), []);
 
-  const handleSearch = (query: string) => {
+  const handleSearch = (params: { from: string; to: string; date: string }) => {
     timers.current.forEach(window.clearTimeout);
     setLoading(true);
     setStep(0);
+    setFlight(null);
+    setResults(null);
+    setRoute(`${params.from} → ${params.to}`);
     timers.current = [
       window.setTimeout(() => setStep(1), 500),
       window.setTimeout(() => setStep(2), 1000),
       window.setTimeout(() => {
-        setFlight(findFlight(query));
+        setResults(findFlights(params.from, params.to));
         setLoading(false);
       }, 1500),
     ];
   };
+
 
   return (
     <div className="min-h-screen bg-background">
