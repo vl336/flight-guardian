@@ -128,8 +128,19 @@ export const SUGGESTIONS = [
   { label: "SU 1402", hint: "Аэрофлот · Москва — Казань", id: "SU1402" },
   { label: "S7 2054", hint: "S7 Airlines · Сочи — Москва", id: "S72054" },
   { label: "DP 405", hint: "Победа · Москва — Санкт-Петербург", id: "DP405" },
-  { label: "Москва — Казань", hint: "Маршрут · 1 рейс", id: "SU1402" },
-  { label: "Сочи — Москва", hint: "Маршрут · 1 рейс", id: "S72054" },
+];
+
+export type Airport = { code: string; city: string; name: string };
+
+export const AIRPORTS: Airport[] = [
+  { code: "SVO", city: "Москва", name: "Шереметьево" },
+  { code: "DME", city: "Москва", name: "Домодедово" },
+  { code: "VKO", city: "Москва", name: "Внуково" },
+  { code: "LED", city: "Санкт-Петербург", name: "Пулково" },
+  { code: "KZN", city: "Казань", name: "Казань" },
+  { code: "AER", city: "Сочи", name: "Сочи" },
+  { code: "SVX", city: "Екатеринбург", name: "Кольцово" },
+  { code: "OVB", city: "Новосибирск", name: "Толмачёво" },
 ];
 
 const normalize = (value: string) =>
