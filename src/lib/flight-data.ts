@@ -143,6 +143,11 @@ export const AIRPORTS: Airport[] = [
   { code: "OVB", city: "Новосибирск", name: "Толмачёво" },
 ];
 
+export const CITIES: string[] = Array.from(
+  new Map(AIRPORTS.map((a) => [a.city, a.city])).values(),
+).sort((a, b) => a.localeCompare(b, "ru"));
+
+
 const normalize = (value: string) =>
   value.toLowerCase().replace(/[\s—–>-]+/g, " ").trim();
 

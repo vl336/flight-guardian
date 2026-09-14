@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SUGGESTIONS, AIRPORTS } from "@/lib/flight-data";
+import { SUGGESTIONS, CITIES } from "@/lib/flight-data";
 
 type Props = {
   onSearch: (query: string) => void;
@@ -59,15 +59,15 @@ export function SearchWidget({ onSearch, loading }: Props) {
           <PlaneTakeoff className="pointer-events-none absolute top-1/2 left-3 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Select value={from} onValueChange={setFrom}>
             <SelectTrigger
-              aria-label="Аэропорт вылета"
+              aria-label="Город отправления"
               className="h-14 rounded-2xl border-border bg-secondary/60 pl-9 text-base"
             >
-              <SelectValue placeholder="Аэропорт вылета" />
+              <SelectValue placeholder="Город отправления" />
             </SelectTrigger>
             <SelectContent>
-              {AIRPORTS.map((a) => (
-                <SelectItem key={`from-${a.code}`} value={a.code}>
-                  {a.city} · {a.name} ({a.code})
+              {CITIES.map((city) => (
+                <SelectItem key={`from-${city}`} value={city}>
+                  {city}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -78,15 +78,15 @@ export function SearchWidget({ onSearch, loading }: Props) {
           <PlaneLanding className="pointer-events-none absolute top-1/2 left-3 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Select value={to} onValueChange={setTo}>
             <SelectTrigger
-              aria-label="Аэропорт прилёта"
+              aria-label="Город прибытия"
               className="h-14 rounded-2xl border-border bg-secondary/60 pl-9 text-base"
             >
-              <SelectValue placeholder="Аэропорт прилёта" />
+              <SelectValue placeholder="Город прибытия" />
             </SelectTrigger>
             <SelectContent>
-              {AIRPORTS.map((a) => (
-                <SelectItem key={`to-${a.code}`} value={a.code}>
-                  {a.city} · {a.name} ({a.code})
+              {CITIES.map((city) => (
+                <SelectItem key={`to-${city}`} value={city}>
+                  {city}
                 </SelectItem>
               ))}
             </SelectContent>
