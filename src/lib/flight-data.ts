@@ -1,3 +1,5 @@
+import { formatTime, type FoundFlight } from "./api";
+
 export type RiskLevel = "LOW" | "HIGH" | "CRITICAL";
 
 export type RiskFactor = {
@@ -147,14 +149,18 @@ export const CITIES: string[] = Array.from(
   new Map(AIRPORTS.map((a) => [a.city, a.city])).values(),
 ).sort((a, b) => a.localeCompare(b, "ru"));
 
-
 const normalize = (value: string) =>
-  value.toLowerCase().replace(/[\s—–>-]+/g, " ").trim();
+  value
+    .toLowerCase()
+    .replace(/[\s—–>-]+/g, " ")
+    .trim();
 
 export function findFlight(query: string): Flight {
   const q = normalize(query);
   if (!q) return FLIGHTS[0]!;
-  const byNumber = FLIGHTS.find((f) => normalize(f.flightNumber).startsWith(q) || f.id.toLowerCase() === q.replace(/\s/g, ""));
+  const byNumber = FLIGHTS.find(
+    (f) => normalize(f.flightNumber).startsWith(q) || f.id.toLowerCase() === q.replace(/\s/g, ""),
+  );
   if (byNumber) return byNumber;
   const byRoute = FLIGHTS.find((f) => {
     const route = normalize(`${f.from.city} ${f.to.city}`);
@@ -169,6 +175,50 @@ export function findFlights(from: string, to: string): Flight[] {
     (f) => (!from || f.from.city === from) && (!to || f.to.city === to),
   );
   return matches.length > 0 ? matches : FLIGHTS;
+}
+
+/**
+ * The schedule API carries times and statuses but no punctuality history or
+ * risk score, so every flight is shown with the same placeholder numbers.
+ * Only the card's identity — airline, number, route, departure — is real.
+ * Replace this once the API exposes analytics.
+ */
+export const PLACEHOLDER_ANALYTICS: Pick<Flight, "history" | "risk"> = {
+  history: {
+    score: 7.2,
+    onTimeRate: 68,
+    avgDelay: 27,
+    distribution: { onTime: 68, medium: 24, severe: 8 },
+    worstDay: "Пятница",
+  },
+  risk: {
+    level: "HIGH",
+    probability: 78,
+    delayFrom: 40,
+    delayTo: 60,
+    factors: [
+      { severity: "high", text: "Самолёт задерживается на предыдущем сегменте маршрута" },
+      { severity: "medium", text: "В аэропорту прилёта прогнозируется сильный боковой ветер" },
+      { severity: "low", text: "Вечерний пик вылетов: очередь на взлёт до 12 минут" },
+    ],
+  },
+};
+
+/** Builds the analytics card's input from a flight found through the API. */
+export function toAnalyticsFlight(flight: FoundFlight): Flight {
+  const destination = flight.destination ?? "—";
+  return {
+    id: String(flight.id),
+    flightNumber: flight.number,
+    airline: flight.carrier,
+    from: { city: flight.city, code: flight.airport },
+    // The API names the arrival city but carries no arrival airport code and
+    // no arrival time, so the city stands in for the code and arrival is blank.
+    to: { city: destination, code: destination },
+    departure: formatTime(flight.scheduledLocalTime),
+    arrival: "—",
+    ...PLACEHOLDER_ANALYTICS,
+  };
 }
 
 export const LOADING_STEPS = [

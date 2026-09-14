@@ -7,7 +7,7 @@ import { SearchWidget } from "@/components/SearchWidget";
 import { FlightResults } from "@/components/FlightResults";
 import { FlightDetails } from "@/components/FlightDetails";
 import { FlightAnalytics } from "@/components/FlightAnalytics";
-import { FLIGHTS } from "@/lib/flight-data";
+import { toAnalyticsFlight } from "@/lib/flight-data";
 import { fetchFlights, type FoundFlight, type SearchParams } from "@/lib/api";
 
 export const Route = createFileRoute("/")({
@@ -101,8 +101,8 @@ function Index() {
                 <ArrowLeft className="mr-1 h-4 w-4" />
                 Назад к списку рейсов
               </Button>
+              <FlightAnalytics flight={toAnalyticsFlight(flight)} />
               <FlightDetails flight={flight} />
-              <DemoAnalytics />
             </div>
           ) : flights.data ? (
             <FlightResults route={route} result={flights.data} onSelect={setFlight} />
@@ -113,23 +113,6 @@ function Index() {
       <footer className="border-t border-border px-4 py-8 text-center text-xs text-muted-foreground">
         Данные носят аналитический характер и не являются официальной информацией перевозчика.
       </footer>
-    </div>
-  );
-}
-
-/**
- * The schedule API returns times and statuses but no punctuality history or
- * risk score, so the analytics card stays the mock prototype from the branch.
- * It is labelled as a demo rather than dressed up as this flight's numbers.
- */
-function DemoAnalytics() {
-  return (
-    <div className="grid gap-3">
-      <div className="rounded-2xl bg-warning-soft px-4 py-3 text-sm font-semibold text-warning">
-        Ниже — демонстрация будущей аналитики риска на примере рейса SU 1402. API расписаний пока не
-        отдаёт историю пунктуальности и прогноз задержки.
-      </div>
-      <FlightAnalytics flight={FLIGHTS[0]!} />
     </div>
   );
 }
