@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Radar, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Loader2, Radar, Search, TriangleAlert } from "lucide-react";
 import { SearchWidget } from "@/components/SearchWidget";
-import { FlightAnalytics } from "@/components/FlightAnalytics";
-import { FLIGHTS, LOADING_STEPS, findFlight, type Flight } from "@/lib/flight-data";
+import { FlightResults } from "@/components/FlightResults";
+import { AlertsSubscribe } from "@/components/AlertsSubscribe";
+import { fetchFlights, type SearchParams } from "@/lib/api";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -17,8 +19,7 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "FlightRisk — риск задержки вашего рейса" },
       {
         property: "og:description",
-        content:
-          "Аналитика пунктуальности авиарейсов и прогноз риска задержки в реальном времени.",
+        content: "Аналитика пунктуальности авиарейсов и прогноз риска задержки в реальном времени.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -28,26 +29,15 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const [flight, setFlight] = useState<Flight>(FLIGHTS[0]!);
-  const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState(0);
-  const timers = useRef<number[]>([]);
+  // Set only when the user submits the form, so nothing is fetched before that.
+  const [params, setParams] = useState<SearchParams | null>(null);
 
-  useEffect(() => () => timers.current.forEach(window.clearTimeout), []);
-
-  const handleSearch = (query: string) => {
-    timers.current.forEach(window.clearTimeout);
-    setLoading(true);
-    setStep(0);
-    timers.current = [
-      window.setTimeout(() => setStep(1), 500),
-      window.setTimeout(() => setStep(2), 1000),
-      window.setTimeout(() => {
-        setFlight(findFlight(query));
-        setLoading(false);
-      }, 1500),
-    ];
-  };
+  const flights = useQuery({
+    queryKey: ["flights", params],
+    queryFn: () => fetchFlights(params!),
+    enabled: params !== null,
+    staleTime: 60 * 1000,
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -77,23 +67,65 @@ function Index() {
       </section>
 
       <main className="mx-auto -mt-16 max-w-3xl px-4 pb-16">
-        <SearchWidget onSearch={handleSearch} loading={loading} />
+        <SearchWidget onSearch={setParams} searching={flights.isFetching} />
 
-        <div className="mt-6">
-          {loading ? (
-            <div className="grid place-items-center gap-3 rounded-3xl bg-card p-12 text-center shadow-card">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="font-semibold">{LOADING_STEPS[step]}</p>
-            </div>
+        <div className="mt-6 space-y-4">
+          {params === null ? (
+            <Placeholder />
+          ) : flights.isPending || flights.isFetching ? (
+            <Loading />
+          ) : flights.isError ? (
+            <Failed message={flights.error.message} onRetry={() => flights.refetch()} />
           ) : (
-            <FlightAnalytics flight={flight} />
+            <FlightResults params={params} result={flights.data} />
           )}
+
+          <AlertsSubscribe params={params} />
         </div>
       </main>
 
       <footer className="border-t border-border px-4 py-8 text-center text-xs text-muted-foreground">
         Данные носят аналитический характер и не являются официальной информацией перевозчика.
       </footer>
+    </div>
+  );
+}
+
+function Placeholder() {
+  return (
+    <div className="grid place-items-center gap-3 rounded-3xl bg-card p-12 text-center shadow-card">
+      <Search className="h-8 w-8 text-muted-foreground" />
+      <p className="font-semibold">Выберите города и дату</p>
+      <p className="text-sm text-muted-foreground">
+        Покажем все рейсы по направлению и то, насколько их уже сдвинули от первоначального
+        расписания.
+      </p>
+    </div>
+  );
+}
+
+function Loading() {
+  return (
+    <div className="grid place-items-center gap-3 rounded-3xl bg-card p-12 text-center shadow-card">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <p className="font-semibold">Ищем рейсы...</p>
+    </div>
+  );
+}
+
+function Failed({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="grid place-items-center gap-3 rounded-3xl bg-card p-12 text-center shadow-card">
+      <TriangleAlert className="h-8 w-8 text-danger" />
+      <p className="font-semibold">Не удалось загрузить рейсы</p>
+      <p className="text-sm text-muted-foreground">{message}</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="mt-1 font-bold text-primary hover:underline"
+      >
+        Попробовать ещё раз
+      </button>
     </div>
   );
 }
