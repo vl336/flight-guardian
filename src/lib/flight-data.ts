@@ -125,9 +125,9 @@ export const FLIGHTS: Flight[] = [
 ];
 
 export const SUGGESTIONS = [
-  { label: "SU 1402", hint: "Аэрофлот · Москва — Казань", id: "SU1402" },
-  { label: "S7 2054", hint: "S7 Airlines · Сочи — Москва", id: "S72054" },
-  { label: "DP 405", hint: "Победа · Москва — Санкт-Петербург", id: "DP405" },
+  { label: "SU 1402", airline: "Аэрофлот", route: "Москва — Казань", id: "SU1402" },
+  { label: "S7 2054", airline: "S7 Airlines", route: "Сочи — Москва", id: "S72054" },
+  { label: "DP 405", airline: "Победа", route: "Москва — Санкт-Петербург", id: "DP405" },
 ];
 
 export type Airport = { code: string; city: string; name: string };
