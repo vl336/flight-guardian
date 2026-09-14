@@ -25,8 +25,11 @@ export function SearchWidget({ onSearch, loading }: Props) {
   const [to, setTo] = useState("");
   const [open, setOpen] = useState(false);
 
-  const filtered = SUGGESTIONS.filter((s) =>
-    s.label.toLowerCase().includes(query.toLowerCase().trim()),
+  const filtered = SUGGESTIONS.filter(
+    (s) =>
+      s.label.toLowerCase().includes(query.toLowerCase().trim()) ||
+      s.airline.toLowerCase().includes(query.toLowerCase().trim()) ||
+      s.route.toLowerCase().includes(query.toLowerCase().trim()),
   );
 
   const submit = (value?: string) => {
