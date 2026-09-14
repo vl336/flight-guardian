@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Radar, Loader2 } from "lucide-react";
+import { Radar, Loader2, Plane, ChevronRight, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { SearchWidget } from "@/components/SearchWidget";
 import { FlightAnalytics } from "@/components/FlightAnalytics";
-import { FLIGHTS, LOADING_STEPS, findFlight, type Flight } from "@/lib/flight-data";
+import { FLIGHTS, LOADING_STEPS, findFlights, type Flight } from "@/lib/flight-data";
 
 export const Route = createFileRoute("/")({
   head: () => ({
