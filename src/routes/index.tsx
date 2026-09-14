@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Radar, Loader2 } from "lucide-react";
+import { Radar, Loader2, Plane, ChevronRight, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { SearchWidget } from "@/components/SearchWidget";
 import { FlightAnalytics } from "@/components/FlightAnalytics";
-import { FLIGHTS, LOADING_STEPS, findFlight, type Flight } from "@/lib/flight-data";
+import { FLIGHTS, LOADING_STEPS, findFlights, type Flight } from "@/lib/flight-data";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -28,26 +29,32 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const [flight, setFlight] = useState<Flight>(FLIGHTS[0]!);
+  const [results, setResults] = useState<Flight[] | null>(null);
+  const [flight, setFlight] = useState<Flight | null>(FLIGHTS[0]!);
+  const [route, setRoute] = useState("");
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(0);
   const timers = useRef<number[]>([]);
 
   useEffect(() => () => timers.current.forEach(window.clearTimeout), []);
 
-  const handleSearch = (query: string) => {
+  const handleSearch = (params: { from: string; to: string; date: string }) => {
     timers.current.forEach(window.clearTimeout);
     setLoading(true);
     setStep(0);
+    setFlight(null);
+    setResults(null);
+    setRoute(`${params.from} → ${params.to}`);
     timers.current = [
       window.setTimeout(() => setStep(1), 500),
       window.setTimeout(() => setStep(2), 1000),
       window.setTimeout(() => {
-        setFlight(findFlight(query));
+        setResults(findFlights(params.from, params.to));
         setLoading(false);
       }, 1500),
     ];
   };
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -85,9 +92,51 @@ function Index() {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <p className="font-semibold">{LOADING_STEPS[step]}</p>
             </div>
-          ) : (
-            <FlightAnalytics flight={flight} />
-          )}
+          ) : flight ? (
+            <div className="grid gap-4">
+              {results && (
+                <Button
+                  variant="ghost"
+                  onClick={() => setFlight(null)}
+                  className="w-fit rounded-2xl font-semibold"
+                >
+                  <ArrowLeft className="mr-1 h-4 w-4" />
+                  Назад к списку рейсов
+                </Button>
+              )}
+              <FlightAnalytics flight={flight} />
+            </div>
+          ) : results ? (
+            <div className="rounded-3xl bg-card p-4 shadow-card sm:p-5">
+              <p className="text-sm text-muted-foreground">
+                Рейсы по маршруту {route}. Выберите рейс, чтобы увидеть аналитику.
+              </p>
+              <ul className="mt-4 grid gap-3">
+                {results.map((f) => (
+                  <li key={f.id}>
+                    <button
+                      type="button"
+                      onClick={() => setFlight(f)}
+                      className="flex w-full items-center gap-3 rounded-2xl border border-border p-3 text-left transition-colors hover:bg-accent"
+                    >
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-secondary">
+                        <Plane className="h-4 w-4 text-sky" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-bold">
+                          {f.airline} · {f.flightNumber}
+                        </span>
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {f.departure} — {f.arrival} · {f.from.code} → {f.to.code}
+                        </span>
+                      </span>
+                      <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </div>
       </main>
 
