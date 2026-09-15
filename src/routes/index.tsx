@@ -58,7 +58,7 @@ function Index() {
             <Radar className="h-5 w-5" />
           </span>
           <div className="min-w-0">
-            <p className="text-lg leading-tight font-extrabold">FlightRisk</p>
+            <p className="text-lg leading-tight font-extrabold">airrisk</p>
             <p className="truncate text-xs text-muted-foreground">
               Аналитика и индекс риска задержки авиарейсов
             </p>
