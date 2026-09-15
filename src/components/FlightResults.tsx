@@ -68,9 +68,8 @@ function FlightRow({
           {flight.carrier} · {flight.number}
         </span>
         <span className="block truncate text-xs text-muted-foreground">
-          {formatTime(flight.scheduledLocalTime)} · {flight.city} → {flight.destination} ·{" "}
-          {flight.airport}
-          {terminal && `, терминал ${terminal}`}
+          {formatTime(flight.scheduledLocalTime)} · {flight.airport}
+          {terminal && `, терминал ${terminal}`} · {flight.city} → {flight.destination}
         </span>
       </span>
       {shift !== 0 && (
