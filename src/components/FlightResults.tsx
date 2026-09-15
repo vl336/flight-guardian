@@ -1,5 +1,6 @@
-import { ChevronRight, Plane } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { formatTime, STATUS_LABEL, STATUS_STYLES, terminalOf, type FoundFlight } from "@/lib/api";
+import { AirlineLogo } from "@/components/AirlineLogo";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -60,9 +61,7 @@ function FlightRow({
       onClick={() => onSelect(flight)}
       className="flex w-full items-center gap-3 rounded-2xl border border-border p-3 text-left transition-colors hover:bg-accent"
     >
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-secondary">
-        <Plane className="h-4 w-4 text-sky" />
-      </span>
+      <AirlineLogo code={flight.carrierCode} name={flight.carrier} />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-bold">
           {flight.carrier} · {flight.number}

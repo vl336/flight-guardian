@@ -52,6 +52,7 @@ const FLIGHTS_QUERY = `query Flights($from: String, $to: String, $date: LocalDat
       id
       number
       carrier
+      carrierCode
       city
       destination
       airport
@@ -96,6 +97,7 @@ export type FoundFlight = Pick<
   | "id"
   | "number"
   | "carrier"
+  | "carrierCode"
   | "city"
   | "destination"
   | "airport"
