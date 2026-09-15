@@ -36,7 +36,7 @@ Mock data should include:
 
 1. Header / Navigation:
 
-   - Logo: "FlightRisk" (with a sleek airplane/radar icon).
+   - Logo: "Airrisk" (with a sleek airplane/radar icon).
 
    - Tagline: "Аналитика и индекс риска задержки авиарейсов".
 

@@ -47,10 +47,10 @@ jobs:
           cat > dist/client/404.html <<HTML
           <!doctype html>
           <meta charset="utf-8">
-          <title>FlightRisk</title>
+          <title>Airrisk</title>
           <meta http-equiv="refresh" content="0; url=$BASE">
           <script>location.replace("$BASE");</script>
-          <a href="$BASE">FlightRisk</a>
+          <a href="$BASE">Airrisk</a>
           HTML
 
       - name: Add CNAME

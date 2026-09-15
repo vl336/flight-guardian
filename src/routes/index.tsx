@@ -12,13 +12,13 @@ import { fetchFlights, type FoundFlight, type SearchParams } from "@/lib/api";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "FlightRisk — индекс риска задержки авиарейсов" },
+      { title: "Airrisk — индекс риска задержки авиарейсов" },
       {
         name: "description",
         content:
           "Проверьте риск задержки или отмены рейса: историческая пунктуальность, цепочки бортов и метеоусловия до официального табло.",
       },
-      { property: "og:title", content: "FlightRisk — риск задержки вашего рейса" },
+      { property: "og:title", content: "Airrisk — риск задержки вашего рейса" },
       {
         property: "og:description",
         content: "Аналитика пунктуальности авиарейсов и прогноз риска задержки в реальном времени.",
@@ -58,7 +58,7 @@ function Index() {
             <Radar className="h-5 w-5" />
           </span>
           <div className="min-w-0">
-            <p className="text-lg leading-tight font-extrabold">airrisk</p>
+            <p className="text-lg leading-tight font-extrabold">Airrisk</p>
             <p className="truncate text-xs text-muted-foreground">
               Аналитика и индекс риска задержки авиарейсов
             </p>
