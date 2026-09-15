@@ -144,6 +144,27 @@ export const STATUS_STYLES: Record<FlightDayStatus, string> = {
   UNKNOWN: "bg-secondary text-muted-foreground",
 };
 
+/**
+ * Carriers passengers recognise, ordered by how much of the schedule they fly
+ * — these seven cover about 69% of it, while 25 of the 65 carriers in the
+ * feed run one or two flights. Edit the list to change what counts as major.
+ */
+export const WELL_KNOWN_CARRIERS = ["SU", "FV", "DP", "U6", "S7", "TK", "UT"];
+
+const carrierRank = new Map(WELL_KNOWN_CARRIERS.map((code, index) => [code, index]));
+
+/**
+ * Major carriers first in the order above, everyone else after them by name,
+ * and each carrier's own flights in departure order.
+ */
+export function byCarrierThenTime(a: FoundFlight, b: FoundFlight) {
+  const rankA = carrierRank.get(a.carrierCode ?? "") ?? WELL_KNOWN_CARRIERS.length;
+  const rankB = carrierRank.get(b.carrierCode ?? "") ?? WELL_KNOWN_CARRIERS.length;
+  if (rankA !== rankB) return rankA - rankB;
+  if (a.carrier !== b.carrier) return a.carrier.localeCompare(b.carrier, "ru");
+  return a.scheduledLocalTime.localeCompare(b.scheduledLocalTime);
+}
+
 const pad = (value: number) => String(value).padStart(2, "0");
 
 /** Local calendar date — `toISOString` would roll over a day in evening MSK. */

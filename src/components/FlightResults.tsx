@@ -1,5 +1,12 @@
 import { ChevronRight } from "lucide-react";
-import { formatTime, STATUS_LABEL, STATUS_STYLES, terminalOf, type FoundFlight } from "@/lib/api";
+import {
+  byCarrierThenTime,
+  formatTime,
+  STATUS_LABEL,
+  STATUS_STYLES,
+  terminalOf,
+  type FoundFlight,
+} from "@/lib/api";
 import { AirlineLogo } from "@/components/AirlineLogo";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +35,7 @@ export function FlightResults({ route, result, onSelect }: Props) {
         детали.
       </p>
       <ul className="mt-4 grid gap-3">
-        {result.items.map((flight) => (
+        {[...result.items].sort(byCarrierThenTime).map((flight) => (
           <li key={flight.id}>
             <FlightRow flight={flight} onSelect={onSelect} />
           </li>
