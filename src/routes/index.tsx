@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Radar, Loader2, ArrowLeft, Search, TriangleAlert } from "lucide-react";
@@ -50,6 +50,24 @@ function Index() {
     setParams(next);
   };
 
+  const detailsRef = useRef<HTMLDivElement>(null);
+
+  // Opening a flight swaps the list for the card but leaves the page at the
+  // same offset, so a click near the bottom of a 50-row list lands the reader
+  // below the card. The page also gets shorter in that swap, which makes the
+  // browser clamp the scroll position — so wait a frame for that to settle and
+  // let scrollIntoView do the arithmetic rather than computing an offset that
+  // is stale by the time it is applied.
+  useEffect(() => {
+    const node = detailsRef.current;
+    if (!node) return;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const frame = requestAnimationFrame(() => {
+      node.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [flight]);
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card/90 backdrop-blur">
@@ -91,7 +109,7 @@ function Index() {
           ) : flights.isError ? (
             <Failed message={flights.error.message} onRetry={() => flights.refetch()} />
           ) : flight ? (
-            <div className="grid gap-4">
+            <div ref={detailsRef} className="grid scroll-mt-4 gap-4">
               <Button
                 variant="ghost"
                 onClick={() => setFlight(null)}
