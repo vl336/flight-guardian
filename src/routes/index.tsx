@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Radar, Loader2, ArrowLeft, Search, TriangleAlert } from "lucide-react";
+import { Plane, Loader2, ArrowLeft, Search, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchWidget } from "@/components/SearchWidget";
 import { FlightResults } from "@/components/FlightResults";
@@ -13,7 +13,7 @@ import { reachGoal } from "@/lib/metrika";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Airrisk — индекс риска задержки авиарейсов" },
+      { title: "Airrisk" },
       {
         name: "description",
         content:
@@ -119,7 +119,7 @@ function Index() {
       <header className="border-b border-border bg-card/90 backdrop-blur">
         <div className="mx-auto grid max-w-5xl grid-cols-[auto_minmax(0,1fr)] items-center gap-3 px-4 py-4">
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-navy text-primary-foreground">
-            <Radar className="h-5 w-5" />
+            <Plane className="h-5 w-5" />
           </span>
           <div className="min-w-0">
             <p className="text-lg leading-tight font-extrabold">Airrisk</p>
