@@ -90,7 +90,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Airrisk — риск задержки авиарейсов" },
+      { title: "Airrisk" },
       {
         name: "description",
         content: "Аналитика пунктуальности рейсов и прогноз риска задержки.",
@@ -112,7 +112,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap",
       },
-      { rel: "icon", href: `${import.meta.env.BASE_URL}favicon.ico`, type: "image/x-icon" },
+      { rel: "icon", href: `${import.meta.env.BASE_URL}favicon.ico`, sizes: "48x48" },
+      { rel: "icon", href: `${import.meta.env.BASE_URL}favicon.svg`, type: "image/svg+xml" },
     ],
   }),
   shellComponent: RootShell,
