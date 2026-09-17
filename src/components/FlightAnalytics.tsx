@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { RISK_LABEL, type Flight, type RiskLevel } from "@/lib/flight-data";
+import { reachGoal } from "@/lib/metrika";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -68,6 +69,12 @@ export function FlightAnalytics({ flight }: { flight: Flight }) {
   const handleSubscribe = () => {
     const clean = email.trim();
     if (!emailRegex.test(clean)) return;
+    // Сам адрес в Метрику не уходит — только рейс и его риск.
+    reachGoal("subscribe_email", {
+      flight: flight.flightNumber,
+      risk_level: flight.risk.level,
+      risk_probability: flight.risk.probability,
+    });
     toast.success("Успешно подписались", {
       description: `Если узнаем что-то новое по рейсу ${flight.flightNumber}, напишем вам на ${clean}.`,
     });
@@ -236,6 +243,9 @@ export function FlightAnalytics({ flight }: { flight: Flight }) {
             href="https://t.me/riskbotair"
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() =>
+              reachGoal("messenger_click", { messenger: "telegram", flight: flight.flightNumber })
+            }
             className="mt-2 inline-block font-bold text-sky hover:underline"
           >
             @riskbotair →
@@ -250,6 +260,9 @@ export function FlightAnalytics({ flight }: { flight: Flight }) {
             href="https://max.ru/riskbotair"
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() =>
+              reachGoal("messenger_click", { messenger: "max", flight: flight.flightNumber })
+            }
             className="mt-2 inline-block font-bold text-sky hover:underline"
           >
             @riskbotair в Макс →
