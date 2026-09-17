@@ -7,24 +7,21 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-
-const yandexMetrikaScript = `
-(function(m,e,t,r,i,k,a){
-    m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-    m[i].l=1*new Date();
-    for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
-    k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
-})(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=112756968', 'ym');
-
-ym(112756968, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
-`;
+import { reachGoal, YM_COUNTER_ID, yandexMetrikaScript } from "../lib/metrika";
 
 function NotFoundComponent() {
+  const reported = useRef(false);
+  useEffect(() => {
+    if (reported.current) return;
+    reported.current = true;
+    reachGoal("page_not_found", { path: window.location.pathname });
+  }, []);
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
@@ -49,8 +46,12 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
+  const reported = useRef<Error | null>(null);
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    if (reported.current === error) return;
+    reported.current = error;
+    reachGoal("app_error", { message: error.message });
   }, [error]);
 
   return (
@@ -133,7 +134,7 @@ function RootShell({ children }: { children: ReactNode }) {
         <noscript>
           <div>
             <img
-              src="https://mc.yandex.ru/watch/112756968"
+              src={`https://mc.yandex.ru/watch/${YM_COUNTER_ID}`}
               style={{ position: "absolute", left: "-9999px" }}
               alt=""
             />

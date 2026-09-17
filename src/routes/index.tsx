@@ -7,7 +7,8 @@ import { SearchWidget } from "@/components/SearchWidget";
 import { FlightResults } from "@/components/FlightResults";
 import { FlightAnalytics } from "@/components/FlightAnalytics";
 import { toAnalyticsFlight } from "@/lib/flight-data";
-import { fetchFlights, type FoundFlight, type SearchParams } from "@/lib/api";
+import { fetchFlights, STATUS_LABEL, type FoundFlight, type SearchParams } from "@/lib/api";
+import { reachGoal } from "@/lib/metrika";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -49,6 +50,51 @@ function Index() {
     setFlight(null);
     setParams(next);
   };
+
+  const handleSelect = (next: FoundFlight) => {
+    reachGoal("flight_open", {
+      carrier: next.carrier,
+      number: next.number,
+      status: STATUS_LABEL[next.status],
+      shift_minutes: next.shiftMinutes,
+    });
+    setFlight(next);
+  };
+
+  const handleRetry = () => {
+    reachGoal("search_retry", { route });
+    flights.refetch();
+  };
+
+  // Исход поиска — отдельная цель от search_submit: до неё доходят не все.
+  // Ключ включает отметки времени ответа, иначе цель ушла бы повторно на
+  // каждый ререндер, но не ушла бы на повторный поиск того же маршрута.
+  const reportedResult = useRef("");
+  useEffect(() => {
+    if (params === null || flights.isFetching) return;
+    const key = `${params.from}|${params.to}|${params.date}|${flights.dataUpdatedAt}|${flights.errorUpdatedAt}`;
+    if (reportedResult.current === key) return;
+    reportedResult.current = key;
+
+    if (flights.isError) {
+      reachGoal("search_result", { result: "error", route, message: flights.error.message });
+    } else if (flights.data) {
+      reachGoal("search_result", {
+        result: flights.data.items.length > 0 ? "ok" : "empty",
+        route,
+        count: flights.data.totalCount,
+      });
+    }
+  }, [
+    params,
+    route,
+    flights.isFetching,
+    flights.isError,
+    flights.error,
+    flights.data,
+    flights.dataUpdatedAt,
+    flights.errorUpdatedAt,
+  ]);
 
   const detailsRef = useRef<HTMLDivElement>(null);
 
@@ -107,7 +153,7 @@ function Index() {
               <p className="font-semibold">Ищем рейсы...</p>
             </div>
           ) : flights.isError ? (
-            <Failed message={flights.error.message} onRetry={() => flights.refetch()} />
+            <Failed message={flights.error.message} onRetry={handleRetry} />
           ) : flight ? (
             <div ref={detailsRef} className="grid scroll-mt-4 gap-4">
               <Button
@@ -121,7 +167,7 @@ function Index() {
               <FlightAnalytics flight={toAnalyticsFlight(flight)} />
             </div>
           ) : flights.data ? (
-            <FlightResults route={route} result={flights.data} onSelect={setFlight} />
+            <FlightResults route={route} result={flights.data} onSelect={handleSelect} />
           ) : null}
         </div>
       </main>

@@ -12,6 +12,7 @@ import {
   toLocalDate,
   type SearchParams,
 } from "@/lib/api";
+import { reachGoal } from "@/lib/metrika";
 
 type Props = {
   onSearch: (params: SearchParams) => void;
@@ -49,18 +50,31 @@ export function SearchWidget({ onSearch, loading }: Props) {
 
   const ready = Boolean(from && to && date && from !== to);
 
+  // Насколько заранее ищут — самый полезный разрез по поиску: за сегодня
+  // и за неделю это разные сценарии.
+  const daysAhead = Math.round(
+    (new Date(`${date}T00:00:00`).getTime() - new Date(`${today}T00:00:00`).getTime()) / 86_400_000,
+  );
+
+  const selectCity = (field: "from" | "to", city: string) => {
+    (field === "from" ? setFrom : setTo)(city);
+    reachGoal("city_select", { field, city });
+  };
+
   return (
     <div className="rounded-3xl bg-card p-4 shadow-float sm:p-5">
       <form
         className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
         onSubmit={(e) => {
           e.preventDefault();
-          if (ready && !loading) onSearch({ from, to, date });
+          if (!ready || loading) return;
+          reachGoal("search_submit", { from, to, date, days_ahead: daysAhead });
+          onSearch({ from, to, date });
         }}
       >
         <CityCombobox
           value={from}
-          onChange={setFrom}
+          onChange={(city) => selectCity("from", city)}
           options={(cities.data ?? []).map((c) => ({
             value: c.city,
             hint: c.airports.join(" · "),
@@ -74,7 +88,7 @@ export function SearchWidget({ onSearch, loading }: Props) {
 
         <CityCombobox
           value={to}
-          onChange={setTo}
+          onChange={(city) => selectCity("to", city)}
           options={(destinations.data ?? []).map((d) => ({
             value: d.title,
             hint: `${d.flightCount} рейс${plural(d.flightCount)}`,
