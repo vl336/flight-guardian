@@ -190,14 +190,28 @@ function weatherAt(place: string, hours: number, dayOfYear: number): Weather {
 const legsFlownBy = (hour: number) =>
   clampInt(Math.floor(((hour < 5 ? hour + 24 : hour) - 6) / 4), 0, 5);
 
-/** "SU 1402" -> "SU 1401": carriers number the two halves of a rotation in sequence. */
+/**
+ * "SU 1402" -> "SU 1401": carriers number the two halves of a rotation in
+ * sequence.
+ *
+ * The digits are matched as the trailing run, with the carrier prefix taking
+ * whatever is left. A prefix pattern that could itself contain digits would
+ * swallow one when the number is written without a space — "SU1006" splitting
+ * into "SU1" and "006" — and the subtraction would then apply to the last
+ * digits alone. That reads correctly until the tail has to borrow, at which
+ * point SU10 claims to arrive as SU11.
+ */
 function inboundNumber(flightNumber: string): string | null {
-  const parsed = /^([A-Za-z0-9]{2,3}\s*)?(\d{1,4})([A-Za-z]?)$/.exec(flightNumber.trim());
+  const parsed = /^(.*?)(\d{1,4})([A-Za-z]?)$/.exec(flightNumber.trim());
   if (!parsed) return null;
   const [, prefix = "", digits = "", suffix = ""] = parsed;
   const value = Number(digits);
   const previous = value > 1 ? value - 1 : value + 1;
-  return `${prefix}${String(previous).padStart(digits.length, "0")}${suffix}`;
+  // Only a number that was written with leading zeros keeps its width.
+  const printed = digits.startsWith("0")
+    ? String(previous).padStart(digits.length, "0")
+    : String(previous);
+  return `${prefix}${printed}${suffix}`;
 }
 
 type Rotation = { legs: number; delay: number; number: string | null; city: string };
