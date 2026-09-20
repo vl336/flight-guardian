@@ -34,7 +34,10 @@ export function FlightResults({ route, result, onSelect }: Props) {
         Рейсы по маршруту {route} — найдено {result.totalCount}. Выберите рейс, чтобы увидеть
         детали.
       </p>
-      <ul className="mt-4 grid gap-3">
+      {/* minmax(0,1fr) instead of the default auto track: grid items refuse to shrink
+          below their content, so without it a long route pushes the row past the card
+          and the truncate inside FlightRow never kicks in. */}
+      <ul className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-3">
         {[...result.items].sort(byCarrierThenTime).map((flight) => (
           <li key={flight.id}>
             <FlightRow flight={flight} onSelect={onSelect} />
@@ -70,8 +73,11 @@ function FlightRow({
     >
       <AirlineLogo code={flight.carrierCode} name={flight.carrier} />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-bold">
-          {flight.carrier} · {flight.number}
+        {/* The flight number is what identifies the row, so it never truncates —
+            a long carrier name gives way instead. */}
+        <span className="flex items-baseline gap-1 text-sm font-bold">
+          <span className="truncate">{flight.carrier}</span>
+          <span className="shrink-0">· {flight.number}</span>
         </span>
         <span className="block truncate text-xs text-muted-foreground">
           {formatTime(flight.scheduledLocalTime)} · {flight.airport}
