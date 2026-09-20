@@ -1,4 +1,6 @@
 import { formatTime, type FoundFlight } from "./api";
+import { forecastFor } from "./flight-forecast";
+import type { LocalDate } from "./graphql-types";
 
 export type RiskLevel = "LOW" | "HIGH" | "CRITICAL";
 
@@ -174,10 +176,9 @@ export function findFlights(from: string, to: string): Flight[] {
 }
 
 /**
- * The schedule API carries times and statuses but no punctuality history or
- * risk score, so every flight is shown with the same placeholder numbers.
- * Only the card's identity — airline, number, route, departure — is real.
- * Replace this once the API exposes analytics.
+ * The shape the card expects, kept as a reference for what one flight's
+ * analytics looks like. Nothing renders it any more: `toAnalyticsFlight` now
+ * generates per-flight numbers through `forecastFor`.
  */
 export const PLACEHOLDER_ANALYTICS: Pick<Flight, "history" | "risk"> = {
   history: {
@@ -200,17 +201,34 @@ export const PLACEHOLDER_ANALYTICS: Pick<Flight, "history" | "risk"> = {
   },
 };
 
-/** Builds the analytics card's input from a flight found through the API. */
-export function toAnalyticsFlight(flight: FoundFlight): Flight {
+/**
+ * Builds the analytics card's input from a flight found through the API. The
+ * schedule carries no punctuality history or risk score, so those halves are
+ * generated — deterministically, from this flight's identity and the date it
+ * flies on, which is why the date has to be passed in alongside it.
+ */
+export function toAnalyticsFlight(flight: FoundFlight, date: LocalDate): Flight {
   const destination = flight.destination ?? "—";
+  const departure = formatTime(flight.scheduledLocalTime);
   return {
     id: String(flight.id),
     flightNumber: flight.number,
     airline: flight.carrier,
     from: { city: flight.city, code: flight.airport },
     to: { city: destination },
-    departure: formatTime(flight.scheduledLocalTime),
-    ...PLACEHOLDER_ANALYTICS,
+    departure,
+    ...forecastFor({
+      flightNumber: flight.number,
+      carrierCode: flight.carrierCode,
+      airline: flight.carrier,
+      fromCity: flight.city,
+      fromAirport: flight.airport,
+      toCity: destination,
+      date,
+      departure,
+      shiftMinutes: flight.shiftMinutes,
+      status: flight.status,
+    }),
   };
 }
 
