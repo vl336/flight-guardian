@@ -103,6 +103,7 @@ export function SearchWidget({ onSearch, loading }: Props) {
           <Input
             type="date"
             value={date}
+            min={today}
             onChange={(e) => setDate(e.target.value)}
             aria-label="Дата вылета"
             title="Дата вылета"
