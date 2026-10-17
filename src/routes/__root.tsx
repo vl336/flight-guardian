@@ -14,7 +14,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { reachGoal } from "../lib/analytics";
 import { YM_COUNTER_ID, yandexMetrikaScript } from "../lib/metrika";
-import { TMR_COUNTER_ID, topMailRuScript } from "../lib/top-mail-ru";
+import { TMR_COUNTER_ID, TMR_SCRIPT_ID, TMR_SCRIPT_SRC, topMailRuScript } from "../lib/top-mail-ru";
 
 function NotFoundComponent() {
   const reported = useRef(false);
@@ -110,6 +110,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      { rel: "preconnect", href: "https://top-fwz1.mail.ru" },
+      { rel: "preconnect", href: "https://mc.yandex.ru" },
       {
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap",
@@ -133,6 +135,7 @@ function RootShell({ children }: { children: ReactNode }) {
         <script type="text/javascript" dangerouslySetInnerHTML={{ __html: yandexMetrikaScript }} />
         {/* Top.Mail.Ru counter (пиксель VK Рекламы) */}
         <script type="text/javascript" dangerouslySetInnerHTML={{ __html: topMailRuScript }} />
+        <script async id={TMR_SCRIPT_ID} src={TMR_SCRIPT_SRC} />
       </head>
       <body>
         {children}
