@@ -1,8 +1,15 @@
 /**
- * Пиксель VK Рекламы (счётчик Top.Mail.Ru). Ставится инлайном в <head>
- * (см. RootShell): очередь window._tmr — обычный массив, он существует
- * до загрузки code.js, и всё, что в него положили раньше, обработается
- * после загрузки. Ранние цели не теряются.
+ * Пиксель VK Рекламы (счётчик Top.Mail.Ru). Очередь window._tmr заводится
+ * инлайном в <head> (см. RootShell) — это обычный массив, он существует до
+ * загрузки code.js, и всё, что в него положили раньше, обработается после.
+ * Ранние цели не теряются.
+ *
+ * code.js подключается отдельным <script async>, а не вставкой через
+ * createElement, как в исходном сниппете VK. Вставку из JS предсканер
+ * браузера не видит, поэтому загрузка стартовала только после выполнения
+ * инлайн-скрипта — а он ждёт блокирующие стили, которые стоят выше в <head>.
+ * На бою это давало задержку около 700 мс и диагностику VK «Пиксель долго
+ * загружается». Статический тег предсканер находит сразу при разборе HTML.
  *
  * Как и в Метрике, цель должна быть заведена в кабинете VK Рекламы с тем же
  * именем, иначе достижение никуда не попадёт.
@@ -10,18 +17,15 @@
 
 export const TMR_COUNTER_ID = "3805351";
 
+export const TMR_SCRIPT_SRC = "https://top-fwz1.mail.ru/js/code.js";
+
+/** Тот же id, что и в оригинальном сниппете VK. */
+export const TMR_SCRIPT_ID = "tmr-code";
+
 export const topMailRuScript = `
 var _tmr = window._tmr || (window._tmr = []);
 _tmr.push({id: "${TMR_COUNTER_ID}", type: "pageView", start: (new Date()).getTime()});
-(function (d, w, id) {
-  if (d.getElementById(id)) return;
-  var ts = d.createElement("script"); ts.type = "text/javascript"; ts.async = true; ts.id = id;
-  ts.src = "https://top-fwz1.mail.ru/js/code.js";
-  var f = function () {var s = d.getElementsByTagName("script")[0]; s.parentNode.insertBefore(ts, s);};
-  if (w.opera == "[object Opera]") { d.addEventListener("DOMContentLoaded", f, false); } else { f(); }
-})(document, window, "tmr-code");
 `;
-
 type TmrEvent = {
   id: string;
   type: string;
