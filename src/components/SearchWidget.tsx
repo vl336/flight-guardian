@@ -4,13 +4,8 @@ import { Search, CalendarDays, PlaneTakeoff, PlaneLanding } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CityCombobox } from "@/components/CityCombobox";
-import {
-  fetchDepartureCities,
-  fetchDestinations,
-  toLocalDate,
-  type SearchParams,
-} from "@/lib/api";
-import { reachGoal } from "@/lib/metrika";
+import { fetchDepartureCities, fetchDestinations, toLocalDate, type SearchParams } from "@/lib/api";
+import { reachGoal } from "@/lib/analytics";
 
 type Props = {
   onSearch: (params: SearchParams) => void;

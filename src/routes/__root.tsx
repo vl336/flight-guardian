@@ -12,7 +12,9 @@ import { useEffect, useRef, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { reachGoal, YM_COUNTER_ID, yandexMetrikaScript } from "../lib/metrika";
+import { reachGoal } from "../lib/analytics";
+import { YM_COUNTER_ID, yandexMetrikaScript } from "../lib/metrika";
+import { TMR_COUNTER_ID, topMailRuScript } from "../lib/top-mail-ru";
 
 function NotFoundComponent() {
   const reported = useRef(false);
@@ -129,6 +131,8 @@ function RootShell({ children }: { children: ReactNode }) {
         <HeadContent />
         {/* Yandex.Metrika counter */}
         <script type="text/javascript" dangerouslySetInnerHTML={{ __html: yandexMetrikaScript }} />
+        {/* Top.Mail.Ru counter (пиксель VK Рекламы) */}
+        <script type="text/javascript" dangerouslySetInnerHTML={{ __html: topMailRuScript }} />
       </head>
       <body>
         {children}
@@ -138,6 +142,15 @@ function RootShell({ children }: { children: ReactNode }) {
               src={`https://mc.yandex.ru/watch/${YM_COUNTER_ID}`}
               style={{ position: "absolute", left: "-9999px" }}
               alt=""
+            />
+          </div>
+        </noscript>
+        <noscript>
+          <div>
+            <img
+              src={`https://top-fwz1.mail.ru/counter?id=${TMR_COUNTER_ID};js=na`}
+              style={{ position: "absolute", left: "-9999px" }}
+              alt="Top.Mail.Ru"
             />
           </div>
         </noscript>

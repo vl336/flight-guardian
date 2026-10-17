@@ -8,7 +8,7 @@ import { FlightResults } from "@/components/FlightResults";
 import { FlightAnalytics } from "@/components/FlightAnalytics";
 import { toAnalyticsFlight } from "@/lib/flight-data";
 import { fetchFlights, STATUS_LABEL, type FoundFlight, type SearchParams } from "@/lib/api";
-import { reachGoal } from "@/lib/metrika";
+import { reachGoal } from "@/lib/analytics";
 
 export const Route = createFileRoute("/")({
   head: () => ({
