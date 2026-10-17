@@ -5,10 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CityCombobox } from "@/components/CityCombobox";
 import {
-  addDays,
   fetchDepartureCities,
   fetchDestinations,
-  SCHEDULE_WINDOW_DAYS,
   toLocalDate,
   type SearchParams,
 } from "@/lib/api";
@@ -20,7 +18,6 @@ type Props = {
 };
 
 const today = toLocalDate(new Date());
-const lastDate = toLocalDate(addDays(new Date(), SCHEDULE_WINDOW_DAYS));
 
 export function SearchWidget({ onSearch, loading }: Props) {
   const [date, setDate] = useState(today);
@@ -107,7 +104,6 @@ export function SearchWidget({ onSearch, loading }: Props) {
             type="date"
             value={date}
             min={today}
-            max={lastDate}
             onChange={(e) => setDate(e.target.value)}
             aria-label="Дата вылета"
             title="Дата вылета"
