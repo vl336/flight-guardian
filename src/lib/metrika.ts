@@ -21,36 +21,13 @@ export const yandexMetrikaScript = `
 ym(${YM_COUNTER_ID}, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
 `;
 
-export type Goal =
-  /** Нажали «Найти рейсы» с заполненными полями. */
-  | "search_submit"
-  /** Выдача вернулась: рейсы есть, пусто или ошибка. */
-  | "search_result"
-  /** «Попробовать ещё раз» после неудачного запроса. */
-  | "search_retry"
-  /** Выбрали город отправления или прибытия. */
-  | "city_select"
-  /** Открыли карточку рейса из списка. */
-  | "flight_open"
-  /** Подписались на уведомления по рейсу (email валиден). */
-  | "subscribe_email"
-  /** Переход в Telegram-бота или в Макс. */
-  | "messenger_click"
-  /** Сработал error boundary. */
-  | "app_error"
-  /** Открыли несуществующий адрес. */
-  | "page_not_found";
-
-/** Параметры цели. Персональные данные (email) сюда не попадают. */
-type GoalParams = Record<string, string | number | boolean>;
-
 declare global {
   interface Window {
     ym?: (counterId: number, action: string, ...args: unknown[]) => void;
   }
 }
 
-export function reachGoal(goal: Goal, params?: GoalParams): void {
+export function metrikaReachGoal(goal: string, params?: Record<string, unknown>): void {
   if (typeof window === "undefined") return;
   try {
     window.ym?.(YM_COUNTER_ID, "reachGoal", goal, params);

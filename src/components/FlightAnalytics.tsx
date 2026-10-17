@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { RISK_LABEL, type Flight, type RiskLevel } from "@/lib/flight-data";
-import { reachGoal } from "@/lib/metrika";
+import { reachGoal } from "@/lib/analytics";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
