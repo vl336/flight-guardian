@@ -128,7 +128,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    // Класс на <html> до гидрации ставит ранний скрипт заставки (StartScreen),
+    // React про него не знает — без подавления ругается на расхождение.
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
         {/* Yandex.Metrika counter */}

@@ -190,3 +190,8 @@
     letter-spacing: -0.02em;
   }
 }
+
+/* Заставку уже прошли в этой сессии — прячем её до гидрации, см. StartScreen. */
+html.airrisk-started [data-start-screen] {
+  display: none;
+}

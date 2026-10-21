@@ -11,6 +11,10 @@ import { metrikaReachGoal } from "./metrika";
 import { topMailRuReachGoal } from "./top-mail-ru";
 
 export type Goal =
+  /** Нажали «Начать проверку», и клик прошёл проверку на бота. */
+  | "start_click"
+  /** Нажали «Начать проверку», но клик похож на бота (см. human-check). */
+  | "start_suspect"
   /** Нажали «Найти рейсы» с заполненными полями. */
   | "search_submit"
   /** Выдача вернулась: рейсы есть, пусто или ошибка. */

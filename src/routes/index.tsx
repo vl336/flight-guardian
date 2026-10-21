@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Plane, Loader2, ArrowLeft, Search, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchWidget } from "@/components/SearchWidget";
+import { StartScreen, STARTED_KEY } from "@/components/StartScreen";
 import { FlightResults } from "@/components/FlightResults";
 import { FlightAnalytics } from "@/components/FlightAnalytics";
 import { toAnalyticsFlight } from "@/lib/flight-data";
@@ -32,6 +33,18 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
+  // Заставку показываем один раз за сессию. На сервере sessionStorage нет,
+  // поэтому до гидрации она всегда в разметке, а уже начатую сессию узнаём
+  // в эффекте.
+  const [started, setStarted] = useState(false);
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(STARTED_KEY)) setStarted(true);
+    } catch {
+      // Приватный режим или запрещённое хранилище — просто покажем заставку.
+    }
+  }, []);
+
   // Set only when the user submits the form, so nothing is fetched before that.
   const [params, setParams] = useState<SearchParams | null>(null);
   const [flight, setFlight] = useState<FoundFlight | null>(null);
@@ -116,6 +129,7 @@ function Index() {
 
   return (
     <div className="min-h-screen bg-background">
+      {!started && <StartScreen onStart={() => setStarted(true)} />}
       <header className="border-b border-border bg-card/90 backdrop-blur">
         <div className="mx-auto grid max-w-5xl grid-cols-[auto_minmax(0,1fr)] items-center gap-3 px-4 py-4">
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-navy text-primary-foreground">
