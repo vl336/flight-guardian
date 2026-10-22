@@ -10,14 +10,17 @@ import { reachGoal } from "@/lib/analytics";
 type Props = {
   onSearch: (params: SearchParams) => void;
   loading: boolean;
+  /** Стартовые значения полей. Читаются только при монтировании — для смены нужен новый key. */
+  initialFrom?: string | undefined;
+  initialTo?: string | undefined;
 };
 
 const today = toLocalDate(new Date());
 
-export function SearchWidget({ onSearch, loading }: Props) {
+export function SearchWidget({ onSearch, loading, initialFrom = "", initialTo = "" }: Props) {
   const [date, setDate] = useState(today);
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [from, setFrom] = useState(initialFrom);
+  const [to, setTo] = useState(initialTo);
 
   const cities = useQuery({
     queryKey: ["departure-cities"],

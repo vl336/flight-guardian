@@ -81,7 +81,7 @@ const INBOUND_CITIES = [
  * How busy a departure airport is by hour, 0..1 — the morning and evening waves
  * every hub runs. Drives the queue-on-departure factor.
  */
-const PEAK_BY_HOUR = [
+export const PEAK_BY_HOUR = [
   0.2, 0.15, 0.1, 0.1, 0.15, 0.3, 0.6, 0.85, 0.9, 0.8, 0.6, 0.55, 0.6, 0.6, 0.55, 0.6, 0.7, 0.85,
   0.95, 0.9, 0.8, 0.65, 0.45, 0.3,
 ] as const;

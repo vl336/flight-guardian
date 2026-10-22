@@ -38,7 +38,11 @@ const FEATURES = [
   },
 ];
 
-const STEPS = ["Выберите города и дату", "Найдите свой рейс в списке", "Посмотрите индекс риска"];
+const STEPS = [
+  "Выберите свой город",
+  "Посмотрите, как сегодня летают",
+  "Проверьте конкретный рейс",
+];
 
 type Props = {
   onStart: () => void;
@@ -145,7 +149,7 @@ export function StartScreen({ onStart }: Props) {
                 onClick={handleClick}
                 className="h-14 rounded-2xl px-8 text-base font-bold"
               >
-                Начать проверку
+                Посмотреть обстановку
                 <ArrowRight className="ml-1 h-5 w-5" />
               </Button>
             </div>
