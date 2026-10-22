@@ -24,8 +24,11 @@ export type CityInfo = {
   gradient: string;
   /** С чего начинается доля рейсов вовремя: Москва с тремя хабами стабильно хуже. */
   baseOnTime: number;
-  /** Средняя температура второй половины октября. */
-  baseTemp: number;
+  /**
+   * Средняя суточная температура по месяцам, январь..декабрь — климатическая
+   * норма 1991–2020. От неё пляшет погода, чтобы в январе не было +10.
+   */
+  climate: readonly number[];
   /** Насколько часто здесь вводят «Ковёр» — 0..1. */
   restrictionRate: number;
 };
@@ -42,7 +45,7 @@ export const CITIES: CityInfo[] = [
     tagline: "Три аэропорта и самый плотный трафик страны",
     gradient: "linear-gradient(140deg, oklch(0.32 0.11 285), oklch(0.45 0.17 15) 120%)",
     baseOnTime: 71,
-    baseTemp: 5,
+    climate: [-6.2, -5.9, -0.7, 6.6, 13, 16.9, 19.2, 17, 11.3, 5.6, -0.4, -4.5],
     restrictionRate: 0.55,
   },
   {
@@ -52,7 +55,7 @@ export const CITIES: CityInfo[] = [
     tagline: "Туманы с залива и вечерние волны вылетов",
     gradient: "linear-gradient(140deg, oklch(0.3 0.08 250), oklch(0.5 0.11 200) 120%)",
     baseOnTime: 76,
-    baseTemp: 5,
+    climate: [-4.8, -5, -1, 5.3, 11.5, 15.8, 18.8, 16.8, 11.7, 5.9, 0.6, -2.6],
     restrictionRate: 0.3,
   },
   {
@@ -62,7 +65,7 @@ export const CITIES: CityInfo[] = [
     tagline: "Узел между Москвой, Сибирью и Средней Азией",
     gradient: "linear-gradient(140deg, oklch(0.3 0.06 265), oklch(0.55 0.13 60) 120%)",
     baseOnTime: 79,
-    baseTemp: 1,
+    climate: [-13.2, -11.1, -3.7, 4, 11.4, 16, 18.5, 15.6, 9.8, 2.6, -5, -10.2],
     restrictionRate: 0.2,
   },
 ];
@@ -105,10 +108,36 @@ const SLOW_NOTES = [
   "Медленная обработка багажа",
 ];
 
+/** Явления по температуре: снег при +10 или гроза в мороз выдали бы генерацию сразу. */
 const WEATHER = {
-  cold: ["Ясно", "Облачно", "Мокрый снег", "Позёмка", "Туман"],
+  frost: ["Ясно", "Облачно", "Снег", "Метель", "Морозная дымка"],
+  thaw: ["Облачно", "Мокрый снег", "Туман", "Гололёд", "Дождь со снегом"],
   mild: ["Ясно", "Облачно", "Дождь", "Туман", "Ветер до 12 м/с"],
+  warm: ["Ясно", "Переменная облачность", "Кратковременный дождь", "Гроза"],
 } as const;
+
+const weatherFor = (temp: number) =>
+  temp <= -3 ? WEATHER.frost : temp <= 3 ? WEATHER.thaw : temp <= 15 ? WEATHER.mild : WEATHER.warm;
+
+/**
+ * Норма на конкретный день. Значения месяцев стоят на 15-м числе, между ними —
+ * линейно, иначе 31 января и 1 февраля отличались бы скачком.
+ */
+function climateMean(climate: readonly number[], date: LocalDate) {
+  const [, mm, dd] = date.split("-").map(Number);
+  const month = clamp((mm || 1) - 1, 0, 11);
+  const offset = ((dd || 15) - 15) / 30;
+  const from = offset < 0 ? (month + 11) % 12 : month;
+  const to = (from + 1) % 12;
+  const t = offset < 0 ? 1 + offset : offset;
+  return climate[from]! + (climate[to]! - climate[from]!) * t;
+}
+
+/** Дни от эпохи — непрерывная ось, чтобы соседние дни получали близкую погоду. */
+const dayIndex = (date: LocalDate) => {
+  const [yy, mm, dd] = date.split("-").map(Number);
+  return Date.UTC(yy || 1970, (mm || 1) - 1, dd || 1) / 86_400_000;
+};
 
 export function overviewFor(info: CityInfo, date: LocalDate): CityOverview {
   const seed = (...parts: (string | number)[]) => hash32(info.city, date, ...parts);
@@ -157,7 +186,15 @@ export function overviewFor(info: CityInfo, date: LocalDate): CityOverview {
     ? `Утром в ${restrictedAirport.title} вводили режим «Ковёр» на ${round5(25 + unit(seed("restriction-len")) * 70)} минут — часть рейсов ещё догоняет график`
     : null;
 
-  const temp = Math.round(info.baseTemp + normal(seed("temp")) * 3);
+  // Отклонение от нормы тянется днями, как реальные потепления и похолодания, а
+  // не прыгает каждые сутки. Зимой разброс шире: оттепель и мороз в один месяц
+  // для средней полосы — обычное дело.
+  const norm = climateMean(info.climate, date);
+  const spread = norm < 0 ? 7 : norm < 10 ? 5 : 4;
+  const temp = Math.round(
+    norm + (noise(`${info.city}|temp`, dayIndex(date) / 4) - 0.5) * 2 * spread,
+  );
+  const weather = pick(seed("weather"), weatherFor(temp));
   const airports = info.airports.map<AirportStatus>((airport) => {
     const s = (...parts: string[]) => seed(airport.code, ...parts);
     const isRestricted = restricted && airport.code === restrictedAirport.code;
@@ -169,7 +206,7 @@ export function overviewFor(info: CityInfo, date: LocalDate): CityOverview {
         ? "Последствия «Ковра», задержки до часа"
         : pick(s("note"), slow ? SLOW_NOTES : OK_NOTES),
       temp: temp + Math.round(normal(s("temp"))),
-      weather: pick(s("weather"), temp <= 2 ? WEATHER.cold : WEATHER.mild),
+      weather,
     };
   });
 
