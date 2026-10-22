@@ -1,7 +1,7 @@
 import type { LocalDate } from "./graphql-types";
 
 /**
- * Ссылки на бота @riskbotair. Бот сохраняет payload из ?start= и по нему
+ * Ссылки на бота @riskbotairbot. Бот сохраняет payload из ?start= и по нему
  * связывает переход с рейсом или городом. Ошибку при неверном payload он не
  * показывает, а просто здоровается — переход тогда ни с чем не связать,
  * поэтому всё, что не проходит формат, отправляем голой ссылкой.
@@ -12,7 +12,7 @@ import type { LocalDate } from "./graphql-types";
  * - city_<КОД> — MOW, LED, SVX.
  */
 
-export const TELEGRAM_BOT_URL = "https://t.me/riskbotair";
+export const TELEGRAM_BOT_URL = "https://t.me/riskbotairbot";
 
 const FLIGHT_NUMBER = /^[A-Z0-9]{2}\d{1,4}[A-Z]?$/;
 const CITY_CODE = /^[A-Z]{3}$/;
