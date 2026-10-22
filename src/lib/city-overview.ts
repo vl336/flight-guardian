@@ -19,6 +19,8 @@ export type CityInfo = {
   /** Код города, как на табло пересадок: MOW, LED, SVX. */
   code: string;
   airports: CityAirport[];
+  /** «Сводка по …» — склонять названия по правилам не берёмся, пишем руками. */
+  dative: string;
   tagline: string;
   /** Фон плашки. У каждого города свой оттенок, чтобы их различали с одного взгляда. */
   gradient: string;
@@ -42,6 +44,7 @@ export const CITIES: CityInfo[] = [
       { code: "VKO", title: "Внуково" },
       { code: "DME", title: "Домодедово" },
     ],
+    dative: "Москве",
     tagline: "Три аэропорта и самый плотный трафик страны",
     gradient: "linear-gradient(140deg, oklch(0.32 0.11 285), oklch(0.45 0.17 15) 120%)",
     baseOnTime: 74,
@@ -52,6 +55,7 @@ export const CITIES: CityInfo[] = [
     city: "Санкт-Петербург",
     code: "LED",
     airports: [{ code: "LED", title: "Пулково" }],
+    dative: "Петербургу",
     tagline: "Туманы с залива и вечерние волны вылетов",
     gradient: "linear-gradient(140deg, oklch(0.3 0.08 250), oklch(0.5 0.11 200) 120%)",
     baseOnTime: 78,
@@ -62,6 +66,7 @@ export const CITIES: CityInfo[] = [
     city: "Екатеринбург",
     code: "SVX",
     airports: [{ code: "SVX", title: "Кольцово" }],
+    dative: "Екатеринбургу",
     tagline: "Узел между Москвой, Сибирью и Средней Азией",
     gradient: "linear-gradient(140deg, oklch(0.3 0.06 265), oklch(0.55 0.13 60) 120%)",
     baseOnTime: 80,

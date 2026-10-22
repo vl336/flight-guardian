@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CityCombobox } from "@/components/CityCombobox";
 import { fetchDepartureCities, fetchDestinations, toLocalDate, type SearchParams } from "@/lib/api";
-import { reachGoal } from "@/lib/analytics";
+import { reachGoal, type SearchSource } from "@/lib/analytics";
 
 type Props = {
   onSearch: (params: SearchParams) => void;
   loading: boolean;
+  /** Уходит в search_submit, см. SearchSource. */
+  source: SearchSource;
   /** Стартовые значения полей. Читаются только при монтировании — для смены нужен новый key. */
   initialFrom?: string | undefined;
   initialTo?: string | undefined;
@@ -17,7 +19,13 @@ type Props = {
 
 const today = toLocalDate(new Date());
 
-export function SearchWidget({ onSearch, loading, initialFrom = "", initialTo = "" }: Props) {
+export function SearchWidget({
+  onSearch,
+  loading,
+  source,
+  initialFrom = "",
+  initialTo = "",
+}: Props) {
   const [date, setDate] = useState(today);
   const [from, setFrom] = useState(initialFrom);
   const [to, setTo] = useState(initialTo);
@@ -63,7 +71,7 @@ export function SearchWidget({ onSearch, loading, initialFrom = "", initialTo = 
         onSubmit={(e) => {
           e.preventDefault();
           if (!ready || loading) return;
-          reachGoal("search_submit", { from, to, date, days_ahead: daysAhead });
+          reachGoal("search_submit", { from, to, date, days_ahead: daysAhead, source });
           onSearch({ from, to, date });
         }}
       >

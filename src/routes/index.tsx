@@ -16,7 +16,7 @@ import {
   type FoundFlight,
   type SearchParams,
 } from "@/lib/api";
-import { reachGoal } from "@/lib/analytics";
+import { reachGoal, type SearchSource } from "@/lib/analytics";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -74,8 +74,14 @@ function Index() {
   const loading = params !== null && flights.isFetching;
   const route = params ? `${params.from} → ${params.to}` : "";
 
-  const handleSearch = (next: SearchParams) => {
+  // Откуда начат текущий поиск — уходит в цели выдачи и рейса вслед за search_submit.
+  const [searchSource, setSearchSource] = useState<SearchSource>("form");
+  // Пришли ли к форме из плашки города: тогда её отправка — city_form, а не form.
+  const [fromCity, setFromCity] = useState(false);
+
+  const handleSearch = (next: SearchParams, source: SearchSource) => {
     setFlight(null);
+    setSearchSource(source);
     setParams(next);
   };
 
@@ -86,8 +92,12 @@ function Index() {
 
   const openSearch = (from: string, to?: string) => {
     setSeed((prev) => ({ from, to, key: prev.key + 1 }));
+    setFromCity(true);
     if (to) {
-      handleSearch({ from, to, date: today });
+      // Форму тут не отправляют, поэтому search_submit шлём сами — иначе
+      // воронка от поиска к рейсу теряла бы всех, кто пришёл через направление.
+      reachGoal("search_submit", { from, to, date: today, days_ahead: 0, source: "direction" });
+      handleSearch({ from, to, date: today }, "direction");
     } else {
       setFlight(null);
       setParams(null);
@@ -120,6 +130,7 @@ function Index() {
       number: next.number,
       status: STATUS_LABEL[next.status],
       shift_minutes: next.shiftMinutes,
+      source: searchSource,
     });
     setFlight(next);
   };
@@ -140,17 +151,24 @@ function Index() {
     reportedResult.current = key;
 
     if (flights.isError) {
-      reachGoal("search_result", { result: "error", route, message: flights.error.message });
+      reachGoal("search_result", {
+        result: "error",
+        route,
+        message: flights.error.message,
+        source: searchSource,
+      });
     } else if (flights.data) {
       reachGoal("search_result", {
         result: flights.data.items.length > 0 ? "ok" : "empty",
         route,
         count: flights.data.totalCount,
+        source: searchSource,
       });
     }
   }, [
     params,
     route,
+    searchSource,
     flights.isFetching,
     flights.isError,
     flights.error,
@@ -221,7 +239,8 @@ function Index() {
             key={seed.key}
             initialFrom={seed.from}
             initialTo={seed.to}
-            onSearch={handleSearch}
+            onSearch={(next) => handleSearch(next, fromCity ? "city_form" : "form")}
+            source={fromCity ? "city_form" : "form"}
             loading={loading}
           />
 
@@ -248,6 +267,7 @@ function Index() {
                 <FlightAnalytics
                   flight={toAnalyticsFlight(flight, params.date)}
                   date={params.date}
+                  source={searchSource}
                 />
               </div>
             ) : flights.data ? (
