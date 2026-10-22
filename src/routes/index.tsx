@@ -79,13 +79,13 @@ function Index() {
     setParams(next);
   };
 
-  // Форма поиска появляется только после явного шага из плашки города — так
-  // видно, сколько людей вообще доходит до поиска своего рейса.
-  const [seed, setSeed] = useState<SearchSeed | null>(null);
+  // Форма поиска под плашками видна всегда. Плашка города только подставляет в
+  // неё значения и прокручивает к ней — key 0 значит, что этого ещё не было.
+  const [seed, setSeed] = useState<SearchSeed>({ from: "", key: 0 });
   const searchRef = useRef<HTMLElement>(null);
 
   const openSearch = (from: string, to?: string) => {
-    setSeed((prev) => ({ from, to, key: (prev?.key ?? 0) + 1 }));
+    setSeed((prev) => ({ from, to, key: prev.key + 1 }));
     if (to) {
       handleSearch({ from, to, date: today });
     } else {
@@ -106,7 +106,7 @@ function Index() {
 
   useEffect(() => {
     const node = searchRef.current;
-    if (!node || seed === null) return;
+    if (!node || seed.key === 0) return;
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const frame = requestAnimationFrame(() => {
       node.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
@@ -212,51 +212,49 @@ function Index() {
       <main className="mx-auto -mt-16 max-w-3xl px-4 pb-16">
         <CityOverview date={today} onFindFlight={handleFindFlight} onDirection={handleDirection} />
 
-        {seed && (
-          <section ref={searchRef} className="mt-10 scroll-mt-4">
-            <h2 className="text-2xl font-black">Проверить конкретный рейс</h2>
-            <p className="mt-1 mb-4 text-sm text-muted-foreground">
-              Выберите направление и дату — покажем все рейсы и риск задержки по каждому.
-            </p>
-            <SearchWidget
-              key={seed.key}
-              initialFrom={seed.from}
-              initialTo={seed.to}
-              onSearch={handleSearch}
-              loading={loading}
-            />
+        <section ref={searchRef} className="mt-10 scroll-mt-4">
+          <h2 className="text-2xl font-black">Проверить конкретный рейс</h2>
+          <p className="mt-1 mb-4 text-sm text-muted-foreground">
+            Выберите направление и дату — покажем все рейсы и риск задержки по каждому.
+          </p>
+          <SearchWidget
+            key={seed.key}
+            initialFrom={seed.from}
+            initialTo={seed.to}
+            onSearch={handleSearch}
+            loading={loading}
+          />
 
-            <div className="mt-6">
-              {params === null ? (
-                <Placeholder />
-              ) : loading ? (
-                <div className="grid place-items-center gap-3 rounded-3xl bg-card p-12 text-center shadow-card">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="font-semibold">Ищем рейсы...</p>
-                </div>
-              ) : flights.isError ? (
-                <Failed message={flights.error.message} onRetry={handleRetry} />
-              ) : flight ? (
-                <div ref={detailsRef} className="grid scroll-mt-4 gap-4">
-                  <Button
-                    variant="ghost"
-                    onClick={() => setFlight(null)}
-                    className="w-fit rounded-2xl font-semibold"
-                  >
-                    <ArrowLeft className="mr-1 h-4 w-4" />
-                    Назад к списку рейсов
-                  </Button>
-                  <FlightAnalytics
-                    flight={toAnalyticsFlight(flight, params.date)}
-                    date={params.date}
-                  />
-                </div>
-              ) : flights.data ? (
-                <FlightResults route={route} result={flights.data} onSelect={handleSelect} />
-              ) : null}
-            </div>
-          </section>
-        )}
+          <div className="mt-6">
+            {params === null ? (
+              <Placeholder />
+            ) : loading ? (
+              <div className="grid place-items-center gap-3 rounded-3xl bg-card p-12 text-center shadow-card">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="font-semibold">Ищем рейсы...</p>
+              </div>
+            ) : flights.isError ? (
+              <Failed message={flights.error.message} onRetry={handleRetry} />
+            ) : flight ? (
+              <div ref={detailsRef} className="grid scroll-mt-4 gap-4">
+                <Button
+                  variant="ghost"
+                  onClick={() => setFlight(null)}
+                  className="w-fit rounded-2xl font-semibold"
+                >
+                  <ArrowLeft className="mr-1 h-4 w-4" />
+                  Назад к списку рейсов
+                </Button>
+                <FlightAnalytics
+                  flight={toAnalyticsFlight(flight, params.date)}
+                  date={params.date}
+                />
+              </div>
+            ) : flights.data ? (
+              <FlightResults route={route} result={flights.data} onSelect={handleSelect} />
+            ) : null}
+          </div>
+        </section>
       </main>
 
       <footer className="border-t border-border px-4 py-8 text-center text-xs text-muted-foreground">
@@ -270,7 +268,7 @@ function Placeholder() {
   return (
     <div className="grid place-items-center gap-3 rounded-3xl bg-card p-12 text-center shadow-card">
       <Search className="h-8 w-8 text-muted-foreground" />
-      <p className="font-semibold">Выберите город прибытия и дату</p>
+      <p className="font-semibold">Выберите города и дату</p>
       <p className="text-sm text-muted-foreground">
         Покажем все рейсы по направлению и то, насколько их уже сдвинули от первоначального
         расписания.

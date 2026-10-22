@@ -104,7 +104,7 @@ function CityCard({ info, date, open, onToggle, onFindFlight, onDirection }: Car
   const panelId = `city-panel-${info.code}`;
 
   return (
-    <article className="overflow-hidden rounded-3xl bg-card shadow-card">
+    <article className="overflow-hidden rounded-3xl shadow-card">
       <button
         type="button"
         onClick={onToggle}
@@ -161,7 +161,7 @@ function CityCard({ info, date, open, onToggle, onFindFlight, onDirection }: Car
         id={panelId}
         className={`grid transition-[grid-template-rows] duration-300 ease-out ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
       >
-        <div className="min-h-0 overflow-hidden" inert={!open}>
+        <div className="min-h-0 overflow-hidden bg-card" inert={!open}>
           <div className="grid gap-6 p-5 sm:p-6">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Stat
