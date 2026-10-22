@@ -28,6 +28,7 @@ import {
 } from "@/lib/city-overview";
 import type { LocalDate } from "@/lib/graphql-types";
 import { reachGoal } from "@/lib/analytics";
+import { cityBotLink } from "@/lib/telegram-bot";
 
 const levelStyles: Record<OverviewLevel, { badge: string; dot: string; bar: string }> = {
   CALM: { badge: "bg-success-soft text-success", dot: "bg-success", bar: "bg-success" },
@@ -399,7 +400,7 @@ function CitySubscribe({ info, level }: { info: CityInfo; level: OverviewLevel }
 
       <div className="mt-3 grid grid-cols-2 gap-2 text-sm font-bold">
         <a
-          href="https://t.me/riskbotair"
+          href={cityBotLink(info.code)}
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => report("telegram")}
