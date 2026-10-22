@@ -165,11 +165,13 @@ export function overviewFor(info: CityInfo, date: LocalDate): CityOverview {
   const kinds = weatherFor(temp);
   const weather = kinds[Math.min(kinds.length - 1, Math.floor(severity * kinds.length))]!;
 
-  // «Ковёр» — событие дня, а не тренд, поэтому разыгрывается на дату.
+  // «Ковёр» — событие дня, а не тренд, поэтому разыгрывается на дату. Говорим
+  // о нём только «недавно»: ни «сейчас», ни «утром», ни длительности — любое
+  // время легко проверить и поймать нас на выдумке.
   const restricted = unit(seed("restriction")) < info.restrictionRate * 0.6;
   const restrictedAirport = pick(seed("restriction-airport"), info.airports);
   const restriction = restricted
-    ? `Утром в ${restrictedAirport.title} вводили режим «Ковёр» на ${round5(25 + unit(seed("restriction-len")) * 70)} минут — часть рейсов ещё догоняет график`
+    ? `Недавно в ${restrictedAirport.title} вводили режим «Ковёр» — часть рейсов может догонять график`
     : null;
 
   // Доля вовремя: база города, медленный фон загрузки, погода и «Ковёр».
@@ -190,8 +192,9 @@ export function overviewFor(info: CityInfo, date: LocalDate): CityOverview {
 
   // Форма дня — те же утренняя и вечерняя волны, что и в прогнозе рейса, плюс
   // накопление: к вечеру задержки тянутся с утра. Шум идёт по сквозной оси
-  // часов, так что вечер вчера и утро сегодня связаны. После «Ковра» утро
-  // тяжелее — иначе предупреждение под графиком ему бы противоречило.
+  // часов, так что вечер вчера и утро сегодня связаны. «Ковёр» сюда не входит:
+  // всплеск в конкретные часы привязал бы его ко времени, а о нём мы говорим
+  // только «недавно». Он уже сидит в доле вовремя, а через неё — в масштабе.
   // Масштаб подогнан так, чтобы среднее сходилось с долей вовремя наверху.
   const target = 100 - onTimeRate;
   const raw = [];
@@ -199,8 +202,7 @@ export function overviewFor(info: CityInfo, date: LocalDate): CityOverview {
     const load = PEAK_BY_HOUR[hour] ?? 0.5;
     const drift = (hour - FIRST_HOUR) / (LAST_HOUR - FIRST_HOUR);
     const wave = 0.6 + 0.8 * noise(`${info.city}|hours`, (day * 24 + hour) / 3);
-    const aftermath = restricted && hour >= 7 && hour <= 11 ? 1.5 : 1;
-    raw.push({ hour, value: load * (0.7 + 0.5 * drift) * wave * aftermath });
+    raw.push({ hour, value: load * (0.7 + 0.5 * drift) * wave });
   }
   const mean = raw.reduce((sum, r) => sum + r.value, 0) / raw.length;
   const hourly = raw.map((r) => ({
@@ -223,7 +225,7 @@ export function overviewFor(info: CityInfo, date: LocalDate): CityOverview {
       ...airport,
       state: isRestricted ? "restricted" : slow ? "slow" : "ok",
       note: isRestricted
-        ? "Последствия «Ковра», задержки до часа"
+        ? "Недавно был «Ковёр», возможны задержки"
         : pick(s("note"), slow ? SLOW_NOTES : OK_NOTES),
       temp: temp + Math.round(normal(s("temp"))),
       weather,
