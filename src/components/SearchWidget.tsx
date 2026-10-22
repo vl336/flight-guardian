@@ -59,7 +59,7 @@ export function SearchWidget({ onSearch, loading, initialFrom = "", initialTo = 
   return (
     <div className="rounded-3xl bg-card p-4 shadow-float sm:p-5">
       <form
-        className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+        className="grid gap-3 sm:grid-cols-2 md:grid-cols-3"
         onSubmit={(e) => {
           e.preventDefault();
           if (!ready || loading) return;
@@ -112,14 +112,14 @@ export function SearchWidget({ onSearch, loading, initialFrom = "", initialTo = 
         <Button
           type="submit"
           disabled={loading || !ready}
-          className="h-14 rounded-2xl text-base font-bold sm:col-span-2 lg:col-span-3"
+          className="h-14 rounded-2xl text-base font-bold md:col-span-3"
         >
           <Search className="mr-1 h-5 w-5" />
           {loading ? "Ищем рейсы..." : "Найти рейсы"}
         </Button>
 
         {from && to && from === to && (
-          <p className="text-sm text-destructive sm:col-span-2 lg:col-span-3">
+          <p className="text-sm text-destructive sm:col-span-2 md:col-span-3">
             Города отправления и прибытия должны различаться.
           </p>
         )}
