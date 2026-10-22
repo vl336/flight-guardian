@@ -1,9 +1,7 @@
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight,
-  BellRing,
   ChevronDown,
   Clock,
   CloudSun,
@@ -15,7 +13,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SubscribeBlock } from "@/components/SubscribeBlock";
 import { fetchDestinations } from "@/lib/api";
 import {
   CITIES,
@@ -322,103 +320,22 @@ function CityCard({ info, date, open, onToggle, onFindFlight, onDirection }: Car
   );
 }
 
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 /**
- * Подписка на обстановку в городе — та же почта, Telegram и Макс, что у рейса.
- * Рассылки по городам пока нет: блок меряет спрос, поэтому каждый канал уходит
- * одной целью city_subscribe с параметром channel.
+ * Подписка на обстановку в городе. Рассылки по городам пока нет: блок меряет
+ * спрос, поэтому каждый канал уходит одной целью city_subscribe с channel.
  */
 function CitySubscribe({ info, level }: { info: CityInfo; level: OverviewLevel }) {
-  const [email, setEmail] = useState("");
-  const [touched, setTouched] = useState(false);
-
-  const isValidEmail = emailRegex.test(email.trim());
-  const showError = touched && email.length > 0 && !isValidEmail;
-
-  // Сам адрес в цели не уходит — только город и канал.
-  const report = (channel: "email" | "telegram" | "max") =>
-    reachGoal("city_subscribe", { city: info.city, channel, level });
-
-  const handleSubscribe = () => {
-    const clean = email.trim();
-    if (!emailRegex.test(clean)) return;
-    report("email");
-    toast.success("Успешно подписались", {
-      description: `Напишем на ${clean}, если в аэропортах что-то изменится.`,
-    });
-    setEmail("");
-    setTouched(false);
-  };
-
   return (
-    <section
-      className="rounded-3xl p-5 text-primary-foreground sm:p-6"
-      style={{ backgroundImage: info.gradient }}
-    >
-      <div className="flex items-start gap-3">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-primary-foreground/15">
-          <BellRing className="h-5 w-5" />
-        </span>
-        <div className="min-w-0">
-          <h3 className="text-lg leading-tight font-extrabold">
-            Следить за обстановкой по {info.dative}
-          </h3>
-          <p className="mt-1 text-sm text-primary-foreground/75">
-            Не нужно помнить номер рейса — напишем, когда в аэропортах города что-то изменится.
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-        <Input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          onBlur={() => setTouched(true)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleSubscribe();
-          }}
-          placeholder="Введите ваш email"
-          aria-label={`Email для сводки по ${info.dative}`}
-          aria-invalid={showError}
-          className="h-12 rounded-2xl border-transparent bg-card text-base text-foreground placeholder:text-muted-foreground"
-        />
-        <Button
-          disabled={!isValidEmail}
-          onClick={handleSubscribe}
-          className="h-12 rounded-2xl bg-card text-base font-bold text-foreground hover:bg-card/90 disabled:opacity-60"
-        >
-          Подписаться
-        </Button>
-      </div>
-      {showError && (
-        <p className="mt-2 text-sm font-semibold text-primary-foreground">
-          Введите корректный email, например name@example.com
-        </p>
-      )}
-
-      <div className="mt-3 grid grid-cols-2 gap-2 text-sm font-bold">
-        <a
-          href={cityBotLink(info.code)}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => report("telegram")}
-          className="rounded-2xl bg-primary-foreground/15 px-3 py-2.5 text-center transition-colors hover:bg-primary-foreground/25"
-        >
-          В Telegram →
-        </a>
-        <a
-          href="https://max.ru/riskbotair"
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => report("max")}
-          className="rounded-2xl bg-primary-foreground/15 px-3 py-2.5 text-center transition-colors hover:bg-primary-foreground/25"
-        >
-          В Макс →
-        </a>
-      </div>
-    </section>
+    <SubscribeBlock
+      title={`Следить за обстановкой по ${info.dative}`}
+      text="Не нужно помнить номер рейса — напишем, когда в аэропортах города что-то изменится."
+      subject={`обстановку по ${info.dative}`}
+      successText={(email) => `Напишем на ${email}, если в аэропортах что-то изменится.`}
+      telegramHref={cityBotLink(info.code)}
+      // Сам адрес в цели не уходит — только город и канал.
+      onSubscribe={(channel) => reachGoal("city_subscribe", { city: info.city, channel, level })}
+      background={info.gradient}
+    />
   );
 }
 
