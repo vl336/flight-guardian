@@ -324,42 +324,27 @@ function CityCard({ info, date, open, onToggle, onFindFlight, onDirection }: Car
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
- * Что присылать. Сам выбор — тоже сигнал: если почти все берут сводку, людям
- * нужен обзор города, а если тревоги — им важен только свой вылет.
- */
-const SUBSCRIBE_MODES = [
-  { value: "alerts", label: "Только тревоги", hint: "массовые задержки, «Ковёр», непогода" },
-  { value: "digest", label: "Утренняя сводка", hint: "обстановка в аэропортах на день" },
-] as const;
-
-type SubscribeMode = (typeof SUBSCRIBE_MODES)[number]["value"];
-
-/**
  * Подписка на обстановку в городе — та же почта, Telegram и Макс, что у рейса.
  * Рассылки по городам пока нет: блок меряет спрос, поэтому каждый канал уходит
  * одной целью city_subscribe с параметром channel.
  */
 function CitySubscribe({ info, level }: { info: CityInfo; level: OverviewLevel }) {
-  const [mode, setMode] = useState<SubscribeMode>("alerts");
   const [email, setEmail] = useState("");
   const [touched, setTouched] = useState(false);
 
   const isValidEmail = emailRegex.test(email.trim());
   const showError = touched && email.length > 0 && !isValidEmail;
 
-  // Сам адрес в цели не уходит — только город, режим и канал.
+  // Сам адрес в цели не уходит — только город и канал.
   const report = (channel: "email" | "telegram" | "max") =>
-    reachGoal("city_subscribe", { city: info.city, channel, mode, level });
+    reachGoal("city_subscribe", { city: info.city, channel, level });
 
   const handleSubscribe = () => {
     const clean = email.trim();
     if (!emailRegex.test(clean)) return;
     report("email");
     toast.success("Успешно подписались", {
-      description:
-        mode === "digest"
-          ? `Будем присылать утреннюю сводку по ${info.dative} на ${clean}.`
-          : `Напишем на ${clean}, если в аэропортах начнутся массовые задержки.`,
+      description: `Напишем на ${clean}, если в аэропортах что-то изменится.`,
     });
     setEmail("");
     setTouched(false);
@@ -384,27 +369,7 @@ function CitySubscribe({ info, level }: { info: CityInfo; level: OverviewLevel }
         </div>
       </div>
 
-      <div role="radiogroup" aria-label="Что присылать" className="mt-4 grid grid-cols-2 gap-2">
-        {SUBSCRIBE_MODES.map((m) => (
-          <button
-            key={m.value}
-            type="button"
-            role="radio"
-            aria-checked={mode === m.value}
-            onClick={() => setMode(m.value)}
-            className={`rounded-2xl border p-3 text-left transition-colors ${
-              mode === m.value
-                ? "border-primary-foreground bg-primary-foreground/20"
-                : "border-primary-foreground/20 hover:bg-primary-foreground/10"
-            }`}
-          >
-            <span className="block text-sm font-bold">{m.label}</span>
-            <span className="mt-0.5 block text-xs text-primary-foreground/70">{m.hint}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
         <Input
           type="email"
           value={email}
