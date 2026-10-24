@@ -11,7 +11,8 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-export type CityOption = { value: string; hint?: string };
+/** `muted` — выбрать можно, но выбор что-то поменяет: например, сдвинет дату. */
+export type CityOption = { value: string; hint?: string; muted?: boolean };
 
 type Props = {
   value: string;
@@ -23,6 +24,8 @@ type Props = {
   icon: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
   loading?: boolean;
+  /** Заголовок группы приглушённых вариантов (`muted`), они идут после обычных. */
+  mutedHeading?: string;
 };
 
 export function CityCombobox({
@@ -35,8 +38,34 @@ export function CityCombobox({
   icon: Icon,
   disabled = false,
   loading = false,
+  mutedHeading,
 }: Props) {
   const [open, setOpen] = useState(false);
+
+  const renderOption = (option: CityOption) => (
+    <CommandItem
+      key={option.value}
+      value={option.value}
+      onSelect={() => {
+        onChange(option.value);
+        setOpen(false);
+      }}
+      className="gap-2"
+    >
+      <Check
+        className={cn("h-4 w-4 shrink-0", value === option.value ? "opacity-100" : "opacity-0")}
+      />
+      <span
+        className={cn(
+          "min-w-0 flex-1 truncate font-medium",
+          option.muted && "text-muted-foreground",
+        )}
+      >
+        {option.value}
+      </span>
+      {option.hint && <span className="shrink-0 text-xs text-muted-foreground">{option.hint}</span>}
+    </CommandItem>
+  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -69,30 +98,12 @@ export function CityCombobox({
           <CommandInput placeholder="Поиск города" />
           <CommandList>
             <CommandEmpty>{emptyText}</CommandEmpty>
-            <CommandGroup>
-              {options.map((option) => (
-                <CommandItem
-                  key={option.value}
-                  value={option.value}
-                  onSelect={() => {
-                    onChange(option.value);
-                    setOpen(false);
-                  }}
-                  className="gap-2"
-                >
-                  <Check
-                    className={cn(
-                      "h-4 w-4 shrink-0",
-                      value === option.value ? "opacity-100" : "opacity-0",
-                    )}
-                  />
-                  <span className="min-w-0 flex-1 truncate font-medium">{option.value}</span>
-                  {option.hint && (
-                    <span className="shrink-0 text-xs text-muted-foreground">{option.hint}</span>
-                  )}
-                </CommandItem>
-              ))}
-            </CommandGroup>
+            <CommandGroup>{options.filter((o) => !o.muted).map(renderOption)}</CommandGroup>
+            {options.some((o) => o.muted) && (
+              <CommandGroup {...(mutedHeading ? { heading: mutedHeading } : {})}>
+                {options.filter((o) => o.muted).map(renderOption)}
+              </CommandGroup>
+            )}
           </CommandList>
         </Command>
       </PopoverContent>
