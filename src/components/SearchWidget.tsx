@@ -55,8 +55,11 @@ export function SearchWidget({ onSearch, loading }: Props) {
 
   return (
     <div className="rounded-3xl bg-card p-4 shadow-float sm:p-5">
+      {/* Явная grid-cols-1, а не неявная колонка: у поля даты своя минимальная
+          ширина (~320 px), и неявная колонка растягивалась под неё — на узких
+          телефонах форма и вся страница вылезали за край экрана. */}
       <form
-        className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
         onSubmit={(e) => {
           e.preventDefault();
           if (!ready || loading) return;

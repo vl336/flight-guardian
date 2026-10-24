@@ -78,28 +78,28 @@ export function StartScreen({ onStart }: Props) {
         aria-labelledby="start-screen-title"
         className="fixed inset-0 z-50 overflow-y-auto bg-hero text-primary-foreground"
       >
-        <div className="mx-auto flex min-h-full max-w-xl flex-col px-4 py-6 sm:py-8">
-          <div className="flex items-center justify-center gap-3">
+        <div className="mx-auto flex min-h-full max-w-xl flex-col px-4 py-6 sm:py-8 short:py-3">
+          <div className="flex items-center justify-center gap-3 short:hidden">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-primary-foreground/10">
               <Plane className="h-5 w-5" />
             </span>
             <p className="text-lg font-extrabold">Airrisk</p>
           </div>
 
-          <div className="flex flex-1 flex-col items-center justify-center py-10 text-center">
+          <div className="flex flex-1 flex-col items-center justify-center py-10 text-center short:py-0">
             <h1
               id="start-screen-title"
-              className="text-3xl leading-tight font-black text-balance sm:text-5xl sm:leading-tight"
+              className="text-3xl leading-tight font-black text-balance sm:text-5xl sm:leading-tight short:text-2xl"
             >
               Узнайте о задержке рейса раньше табло
             </h1>
-            <p className="mt-4 text-base text-balance text-primary-foreground/75 sm:text-lg">
+            <p className="mt-4 text-base text-balance text-primary-foreground/75 sm:text-lg short:mt-2 short:text-sm">
               Покажем риск задержки или отмены вашего рейса
             </p>
-            <ul className="mx-auto mt-6 grid w-fit gap-2.5 text-left">
+            <ul className="mx-auto mt-6 grid w-fit max-w-full gap-2.5 text-left short:mt-4 short:gap-1.5">
               {REASONS.map(({ icon: Icon, text }) => (
                 <li key={text} className="flex items-center gap-3">
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-primary-foreground/10">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-primary-foreground/10 short:h-7 short:w-7">
                     <Icon className="h-4 w-4 text-sky" />
                   </span>
                   <span className="text-sm font-semibold text-primary-foreground/90 sm:text-base">
@@ -111,7 +111,7 @@ export function StartScreen({ onStart }: Props) {
             <Button
               size="lg"
               onClick={handleClick}
-              className="mt-8 h-14 w-full max-w-xs rounded-2xl text-base font-bold"
+              className="mt-8 h-14 w-full max-w-xs rounded-2xl text-base font-bold short:mt-5 short:h-12"
             >
               Начать проверку
               <ArrowRight className="ml-1 h-5 w-5" />
