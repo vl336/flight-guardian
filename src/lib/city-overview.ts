@@ -1,6 +1,7 @@
 import type { LocalDate } from "./graphql-types";
 import { PEAK_BY_HOUR } from "./flight-forecast";
 import { clamp, clampInt, hash32, noise, normal, pick, round5, unit } from "./seeded-random";
+import { dayIndex, phenomenonOf, weatherAt } from "./weather";
 
 /**
  * Обстановка в аэропортах города за день — для тех, кто не помнит свой рейс,
@@ -27,12 +28,10 @@ export type CityInfo = {
   /** С чего начинается доля рейсов вовремя: Москва с тремя хабами стабильно хуже. */
   baseOnTime: number;
   /**
-   * Средняя суточная температура по месяцам, январь..декабрь — климатическая
-   * норма 1991–2020. От неё пляшет погода, чтобы в январе не было +10.
+   * Доля дней, когда на плашке есть «недавно вводили «Ковёр»». Москву
+   * закрывают заметно чаще, чем Петербург и Екатеринбург.
    */
-  climate: readonly number[];
-  /** Насколько часто здесь вводят «Ковёр» — 0..1. */
-  restrictionRate: number;
+  restrictionShare: number;
 };
 
 export const CITIES: CityInfo[] = [
@@ -48,8 +47,7 @@ export const CITIES: CityInfo[] = [
     tagline: "Три аэропорта и самый плотный трафик страны",
     gradient: "linear-gradient(140deg, oklch(0.32 0.11 285), oklch(0.45 0.17 15) 120%)",
     baseOnTime: 74,
-    climate: [-6.2, -5.9, -0.7, 6.6, 13, 16.9, 19.2, 17, 11.3, 5.6, -0.4, -4.5],
-    restrictionRate: 0.55,
+    restrictionShare: 0.15,
   },
   {
     city: "Санкт-Петербург",
@@ -59,8 +57,7 @@ export const CITIES: CityInfo[] = [
     tagline: "Туманы с залива и вечерние волны вылетов",
     gradient: "linear-gradient(140deg, oklch(0.3 0.08 250), oklch(0.5 0.11 200) 120%)",
     baseOnTime: 78,
-    climate: [-4.8, -5, -1, 5.3, 11.5, 15.8, 18.8, 16.8, 11.7, 5.9, 0.6, -2.6],
-    restrictionRate: 0.3,
+    restrictionShare: 0.07,
   },
   {
     city: "Екатеринбург",
@@ -70,8 +67,7 @@ export const CITIES: CityInfo[] = [
     tagline: "Узел между Москвой, Сибирью и Средней Азией",
     gradient: "linear-gradient(140deg, oklch(0.3 0.06 265), oklch(0.55 0.13 60) 120%)",
     baseOnTime: 80,
-    climate: [-13.2, -11.1, -3.7, 4, 11.4, 16, 18.5, 15.6, 9.8, 2.6, -5, -10.2],
-    restrictionRate: 0.2,
+    restrictionShare: 0.05,
   },
 ];
 
@@ -114,39 +110,47 @@ const SLOW_NOTES = [
 ];
 
 /**
- * Явления по температуре: снег при +10 или гроза в мороз выдали бы генерацию
- * сразу. Внутри списка — от безобидного к худшему для расписания, по этому
- * порядку их выбирает тяжесть погоды.
+ * Порог шума, выше которого лежит заданная доля значений. Шум не равномерный —
+ * у середины он гуще, — поэтому порог считается по выборке, а не как 1 − доля.
  */
-const WEATHER = {
-  frost: ["Ясно", "Облачно", "Морозная дымка", "Снег", "Метель"],
-  thaw: ["Облачно", "Дождь со снегом", "Мокрый снег", "Туман", "Гололёд"],
-  mild: ["Ясно", "Облачно", "Ветер до 12 м/с", "Дождь", "Туман"],
-  warm: ["Ясно", "Переменная облачность", "Кратковременный дождь", "Гроза"],
-} as const;
+const noiseQuantile = (() => {
+  const sample = Array.from({ length: 4000 }, (_, i) => noise("quantile", i / 3.7)).sort(
+    (a, b) => a - b,
+  );
+  return (share: number) => sample[Math.floor((1 - share) * (sample.length - 1))]!;
+})();
 
-const weatherFor = (temp: number) =>
-  temp <= -3 ? WEATHER.frost : temp <= 3 ? WEATHER.thaw : temp <= 15 ? WEATHER.mild : WEATHER.warm;
+/** Полдень дня на сквозной оси часов — им описываем погоду на плашке. */
+const NOON = 12;
+
+/** Тяжесть погоды за день по всем аэропортам города: утро, день и вечер. */
+const dailyImpact = (info: CityInfo, day: number) => {
+  let sum = 0;
+  for (const airport of info.airports) {
+    for (const hour of [7, 12, 17]) sum += weatherAt(airport.code, day * 24 + hour).impact;
+  }
+  return sum / (info.airports.length * 3);
+};
 
 /**
- * Норма на конкретный день. Значения месяцев стоят на 15-м числе, между ними —
- * линейно, иначе 31 января и 1 февраля отличались бы скачком.
+ * Обычная тяжесть погоды для города — среднее и разброс за год. Пунктуальность
+ * портит отклонение от своей нормы, а не сама величина: у каждого места свой
+ * постоянный климатический сдвиг, и без этого один город был бы спокойным
+ * всегда, а другой — напряжённым всегда.
  */
-function climateMean(climate: readonly number[], date: LocalDate) {
-  const [, mm, dd] = date.split("-").map(Number);
-  const month = clamp((mm || 1) - 1, 0, 11);
-  const offset = ((dd || 15) - 15) / 30;
-  const from = offset < 0 ? (month + 11) % 12 : month;
-  const to = (from + 1) % 12;
-  const t = offset < 0 ? 1 + offset : offset;
-  return climate[from]! + (climate[to]! - climate[from]!) * t;
+const impactNorm = new Map<string, { mean: number; sd: number }>();
+function impactNormOf(info: CityInfo) {
+  let norm = impactNorm.get(info.city);
+  if (!norm) {
+    const start = dayIndex("2026-01-01");
+    const year = Array.from({ length: 365 }, (_, i) => dailyImpact(info, start + i));
+    const mean = year.reduce((a, b) => a + b, 0) / year.length;
+    const sd = Math.sqrt(year.reduce((a, b) => a + (b - mean) ** 2, 0) / year.length);
+    norm = { mean, sd };
+    impactNorm.set(info.city, norm);
+  }
+  return norm;
 }
-
-/** Дни от эпохи — непрерывная ось, чтобы соседние дни получали близкую погоду. */
-const dayIndex = (date: LocalDate) => {
-  const [yy, mm, dd] = date.split("-").map(Number);
-  return Date.UTC(yy || 1970, (mm || 1) - 1, dd || 1) / 86_400_000;
-};
 
 /**
  * Всё ниже выстроено цепочкой: погода → «Ковёр» → доля вовремя → задержка и
@@ -159,22 +163,22 @@ export function overviewFor(info: CityInfo, date: LocalDate): CityOverview {
   const seed = (...parts: (string | number)[]) => hash32(info.city, date, ...parts);
   const day = dayIndex(date);
 
-  // Отклонение от нормы тянется днями, как реальные потепления и похолодания, а
-  // не прыгает каждые сутки. Зимой разброс шире: оттепель и мороз в один месяц
-  // для средней полосы — обычное дело.
-  const norm = climateMean(info.climate, date);
-  const spread = norm < 0 ? 7 : norm < 10 ? 5 : 4;
-  const temp = Math.round(norm + (noise(`${info.city}|temp`, day / 4) - 0.5) * 2 * spread);
-  // Тяжесть погоды 0..1: она же выбирает явление и она же портит пунктуальность.
-  const severity = noise(`${info.city}|wx`, day / 3);
-  const kinds = weatherFor(temp);
-  const weather = kinds[Math.min(kinds.length - 1, Math.floor(severity * kinds.length))]!;
+  // Погода аэропортов — та же, что видит карточка рейса из этого аэропорта:
+  // один источник на оба экрана. Её тяжесть портит пунктуальность города.
+  const weather = info.airports.map((airport) => weatherAt(airport.code, day * 24 + NOON));
+  const norm = impactNormOf(info);
+  const severity = (dailyImpact(info, day) - norm.mean) / norm.sd;
 
-  // «Ковёр» — событие дня, а не тренд, поэтому разыгрывается на дату. Говорим
-  // о нём только «недавно»: ни «сейчас», ни «утром», ни длительности — любое
-  // время легко проверить и поймать нас на выдумке.
-  const restricted = unit(seed("restriction")) < info.restrictionRate * 0.6;
-  const restrictedAirport = pick(seed("restriction-airport"), info.airports);
+  // «Ковёр» идёт эпизодами по несколько дней, как и в жизни, а не монеткой
+  // каждый день. Говорим о нём только «недавно»: ни «сейчас», ни «утром», ни
+  // длительности — любое время легко проверить и поймать нас на выдумке.
+  const restricted =
+    noise(`${info.city}|restriction`, day / 3) > noiseQuantile(info.restrictionShare);
+  // Аэропорт держится весь эпизод, а не меняется день ото дня.
+  const restrictedAirport = pick(
+    hash32(info.city, "restriction-airport", Math.floor(day / 6)),
+    info.airports,
+  );
   const restriction = restricted
     ? `Недавно в ${restrictedAirport.title} вводили режим «Ковёр» — часть рейсов может догонять график`
     : null;
@@ -182,7 +186,7 @@ export function overviewFor(info: CityInfo, date: LocalDate): CityOverview {
   // Доля вовремя: база города, медленный фон загрузки, погода и «Ковёр».
   const background = (noise(`${info.city}|ops`, day / 3) - 0.5) * 14;
   const onTimeRate = clampInt(
-    info.baseOnTime + background - (severity - 0.4) * 12 - (restricted ? 4 : 0),
+    info.baseOnTime + background - 2.5 * severity - (restricted ? 4 : 0),
     52,
     93,
   );
@@ -222,7 +226,7 @@ export function overviewFor(info: CityInfo, date: LocalDate): CityOverview {
   }
   const worstWindow = { from: hourly[worst]!.hour, to: hourly[worst]!.hour + 3 };
 
-  const airports = info.airports.map<AirportStatus>((airport) => {
+  const airports = info.airports.map<AirportStatus>((airport, i) => {
     const s = (...parts: string[]) => seed(airport.code, ...parts);
     const isRestricted = restricted && airport.code === restrictedAirport.code;
     const slow = !isRestricted && unit(s("slow")) < (100 - onTimeRate) / 45;
@@ -232,8 +236,8 @@ export function overviewFor(info: CityInfo, date: LocalDate): CityOverview {
       note: isRestricted
         ? "Недавно был «Ковёр», возможны задержки"
         : pick(s("note"), slow ? SLOW_NOTES : OK_NOTES),
-      temp: temp + Math.round(normal(s("temp"))),
-      weather,
+      temp: Math.round(weather[i]!.temp),
+      weather: phenomenonOf(weather[i]!),
     };
   });
 

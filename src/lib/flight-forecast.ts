@@ -1,6 +1,7 @@
 import type { FlightDayStatus, LocalDate } from "./graphql-types";
 import type { Flight, RiskFactor, RiskLevel } from "./flight-data";
 import { clamp, clampInt, hash32, noise, normal, pick, round5, unit } from "./seeded-random";
+import { formatVisibility, STORM, weatherAt, type Weather } from "./weather";
 
 /**
  * Plausible-looking analytics for a flight the schedule API has no analytics
@@ -15,10 +16,17 @@ import { clamp, clampInt, hash32, noise, normal, pick, round5, unit } from "./se
 
 /** Every constant that shapes the output, gathered so the feel can be retuned in one place. */
 export const TUNING = {
-  /** Risk is a truncated normal on 0..70: most flights sit around the mean. */
-  risk: { mean: 26, sd: 12, min: 0, max: 70 },
-  /** Thresholds for the three levels the card can render. */
-  level: { high: 25, critical: 50 },
+  /**
+   * Risk is a truncated normal on 0..70: most flights sit around the mean. The
+   * mean sits near the real share of delayed departures, about one in five.
+   */
+  risk: { mean: 22, sd: 12, min: 0, max: 70 },
+  /**
+   * Thresholds for the three levels the card can render. Set so that most
+   * flights read as low risk: when half the list was "elevated", the label
+   * stopped meaning anything and read as scaremongering.
+   */
+  level: { high: 30, critical: 42 },
   /**
    * Centring constants for the two inputs that are not born standard-normal.
    * Measured over 50k synthetic flights. They are what keeps the risk a bell
@@ -26,17 +34,17 @@ export const TUNING = {
    * formulas above has to re-measure them: sample the two quantities over a
    * wide spread of flights and put their mean and standard deviation here.
    */
-  centre: { weatherMean: 0.523, weatherSd: 0.063, rotationMean: 17.8, rotationSd: 15.0 },
+  centre: { weatherMean: 0.51, weatherSd: 0.066, rotationMean: 17.8, rotationSd: 12.4 },
   /** How much each input pushes the risk. Divided out again so the sum stays ~N(0,1). */
   weights: { weather: 1.0, rotation: 0.95, history: 0.85, shift: 0.9, luck: 0.75 },
   /**
-   * When weather is worth a line of its own — a little above the mean impact of
-   * ~0.52, so roughly a third of flights carry one. Only ever one line, for
+   * When weather is worth a line of its own. Measured over a year of flights,
+   * 0.59 leaves roughly a third of them with a line, more in winter. Only ever one line, for
    * whichever end of the route is worse: quoting both turned a list of flights
    * into the same crosswind sentence repeated, which is the clearest tell that
    * the text is generated.
    */
-  weatherFactor: { show: 0.55, high: 0.7 },
+  weatherFactor: { show: 0.59, high: 0.7 },
 } as const;
 
 const WEEKDAYS = [
@@ -104,8 +112,6 @@ export type ForecastInput = {
   status: FlightDayStatus;
 };
 
-const clamp01 = (value: number) => clamp(value, 0, 1);
-
 /**
  * Date and time onto one continuous axis of hours since the epoch. Continuous
  * across midnight on purpose: 23:50 and 00:10 are twenty minutes apart and must
@@ -124,60 +130,8 @@ function timeAxis(date: LocalDate, departure: string) {
   const minute = clamp(Number(minuteText) || 0, 0, 59);
 
   const day = Date.UTC(year, month - 1, dayOfMonth) / 86_400_000;
-  const dayOfYear = day - Date.UTC(year, 0, 1) / 86_400_000;
 
-  return { hours: day * 24 + hour + minute / 60, hour, dayOfYear };
-}
-
-type Weather = {
-  wind: number;
-  fog: number;
-  precip: number;
-  storm: number;
-  gustMs: number;
-  visibilityKm: number;
-  kind: "снег" | "дождь";
-  /** Single 0..1 summary of how much this weather threatens the schedule. */
-  impact: number;
-};
-
-/**
- * Two octaves per channel: the slow one is a front sitting over the city for a
- * day or two, the fast one the swings inside it. Weights sum to 1, so the result
- * stays in [0, 1). A six-hour node means two flights on the same evening share
- * their weather while a morning and an evening flight do not.
- */
-const track = (place: string, channel: string, t: number) =>
-  0.65 * noise(`${place}|${channel}`, t / 6) + 0.35 * noise(`${place}|${channel}|slow`, t / 30);
-
-function weatherAt(place: string, hours: number, dayOfYear: number): Weather {
-  // Constant in time: Sochi stays milder than Novosibirsk on every date rather
-  // than drifting as the reader pages through the calendar.
-  const climate = unit(hash32(place, "climate"));
-  // 1 in January, 0 in July.
-  const season = 0.5 + 0.5 * Math.cos((2 * Math.PI * (dayOfYear + 10)) / 365);
-  const summer = 1 - season;
-
-  const wind = clamp01(0.6 * track(place, "wind", hours) + 0.25 * climate + 0.15 * season);
-  const fog = clamp01(0.6 * track(place, "fog", hours) + 0.2 * climate + 0.2 * season);
-  const precip = clamp01(0.6 * track(place, "precip", hours) + 0.2 * climate + 0.2 * season);
-  // Thunderstorms are a summer thing; snow and fog lean the other way. Without
-  // this the generator hands out a thunderstorm over Novosibirsk in January.
-  const storm = clamp01(track(place, "storm", hours) * (0.45 + 0.55 * summer));
-
-  return {
-    wind,
-    fog,
-    precip,
-    storm,
-    gustMs: Math.round(3 + 19 * wind),
-    visibilityKm: Math.round((10 - 9.3 * fog) * 10) / 10,
-    kind: season > 0.55 ? "снег" : "дождь",
-    // Crosswind closes a runway more often than anything else, so it weighs
-    // most; a storm piles on top. The weights sum past 1 deliberately — fog and
-    // a storm together should hit the ceiling rather than run past it.
-    impact: clamp01(0.4 * wind + 0.25 * fog + 0.15 * precip + 0.35 * storm),
-  };
+  return { hours: day * 24 + hour + minute / 60, hour, day };
 }
 
 /**
@@ -216,10 +170,16 @@ function inboundNumber(flightNumber: string): string | null {
 
 type Rotation = { legs: number; delay: number; number: string | null; city: string };
 
-function rotationOf(input: ForecastInput, hour: number, originImpact: number): Rotation {
+function rotationOf(
+  input: ForecastInput,
+  hour: number,
+  day: number,
+  originImpact: number,
+): Rotation {
   const legs = legsFlownBy(hour);
-  // Half-normal, mean ~0.8: the spread between one flight's chain and the next.
-  const chain = Math.abs(normal(hash32(input.flightNumber, input.date, "chain")));
+  // Mean ~0.8, drifting over days rather than redrawn per date: a rotation that
+  // ran late yesterday tends to run late today too.
+  const chain = 1.6 * noise(`${input.flightNumber}|chain`, day / 3);
   const delay = clampInt(
     legs * 7 * chain + 10 * originImpact + 0.6 * Math.max(0, input.shiftMinutes),
     0,
@@ -233,7 +193,9 @@ function rotationOf(input: ForecastInput, hour: number, originImpact: number): R
     legs,
     delay,
     number: inboundNumber(input.flightNumber),
-    city: pick(hash32(input.flightNumber, input.date, "inbound"), pool).from,
+    // The same flight number flies the same pairing every day; a card that has
+    // it arrive from Arkhangelsk today and Novosibirsk tomorrow gives itself away.
+    city: pick(hash32(input.flightNumber, "inbound"), pool).from,
   };
 }
 
@@ -289,6 +251,7 @@ function probabilityOf(
   weather: { origin: Weather; destination: Weather },
   rotation: Rotation,
   onTimeRate: number,
+  day: number,
 ) {
   const { centre, weights, risk } = TUNING;
 
@@ -299,7 +262,9 @@ function probabilityOf(
     rotation: (rotation.delay - centre.rotationMean) / centre.rotationSd,
     history: (68 - onTimeRate) / 13,
     shift: clamp((input.shiftMinutes - 4) / 22, -1.5, 3),
-    luck: normal(hash32(input.flightNumber, input.date, input.departure, "luck")),
+    // Value noise has a narrower spread than a uniform draw; 4.0 brings it back
+    // to roughly unit variance. It drifts over days like the chain does.
+    luck: (noise(`${input.flightNumber}|${input.departure}|luck`, day / 2) - 0.5) * 4,
   };
 
   const weighted =
@@ -323,32 +288,46 @@ function probabilityOf(
   return removed ? risk.max : drawn;
 }
 
+/**
+ * City names go in parentheses or give way to the airport code: the API hands
+ * out any destination in the nominative, and "в Москва" on a card is the
+ * fastest way to look machine-made. Fog only earns a line once visibility is
+ * genuinely low — 3–6 km is ordinary weather for an airliner.
+ */
+const LOW_VISIBILITY_KM = 1.5;
+
+const windText = (weather: Weather) =>
+  weather.gustMs >= 15 ? "сильный боковой ветер" : "боковой ветер";
+
 function destinationWeatherText(weather: Weather, city: string): string {
-  if (weather.storm > 0.55) {
+  if (weather.storm > STORM) {
     return `Гроза в районе аэропорта прилёта (${city}), возможны ограничения на приём`;
   }
-  if (weather.wind >= weather.fog && weather.wind >= weather.precip) {
-    return `В аэропорту прилёта (${city}) прогнозируется сильный боковой ветер, порывы до ${weather.gustMs} м/с`;
+  if (weather.visibilityKm < LOW_VISIBILITY_KM && weather.fog >= weather.wind) {
+    const visibility = formatVisibility(weather.visibilityKm);
+    return weather.visibilityKm < 0.8
+      ? `Туман в аэропорту прилёта (${city}): видимость ${visibility}, возможен уход на запасной`
+      : `Туман в аэропорту прилёта (${city}): видимость ${visibility}, заход по приборам`;
   }
-  if (weather.fog >= weather.precip) {
-    return `Низкая видимость в ${city} — ${weather.visibilityKm} км, возможен уход на запасной`;
+  if (weather.wind >= weather.precip) {
+    return `В аэропорту прилёта (${city}) прогнозируется ${windText(weather)}, порывы до ${weather.gustMs} м/с`;
   }
-  return `Интенсивный ${weather.kind} в ${city}: аэропорт снижает интенсивность приёма`;
+  return `Интенсивный ${weather.kind} в аэропорту прилёта (${city}): аэропорт снижает интенсивность приёма`;
 }
 
 function originWeatherText(weather: Weather, city: string, airport: string): string {
-  if (weather.storm > 0.55) {
-    return `Грозовой фронт над ${city}: возможна приостановка наземного обслуживания`;
+  if (weather.storm > STORM) {
+    return `Грозовой фронт в районе аэропорта вылета (${city}): возможна приостановка наземного обслуживания`;
   }
-  if (weather.wind >= weather.fog && weather.wind >= weather.precip) {
+  if (weather.visibilityKm < LOW_VISIBILITY_KM && weather.fog >= weather.wind) {
+    return `Видимость в ${airport} ${formatVisibility(weather.visibilityKm)} — вылеты по процедурам низкой видимости`;
+  }
+  if (weather.wind >= weather.precip) {
     return `Порывы до ${weather.gustMs} м/с в ${airport}: ограничения при буксировке и загрузке`;
   }
-  if (weather.fog >= weather.precip) {
-    return `Видимость в ${airport} ${weather.visibilityKm} км — вылеты по процедурам низкой видимости`;
-  }
   return weather.kind === "снег"
-    ? `Снегопад в ${city}: борту потребуется противообледенительная обработка`
-    : `Сильный дождь в ${city}: замедлено наземное обслуживание`;
+    ? `Снегопад в ${airport}: борту потребуется противообледенительная обработка`
+    : `Сильный дождь в ${airport}: замедлено наземное обслуживание`;
 }
 
 /** Same channels the percentage was built from, turned into the lines under it. */
@@ -427,10 +406,9 @@ function factorsOf(
   }
 
   if (candidates.length + pinned.length < 2) {
-    const visibility = Math.min(weather.origin.visibilityKm, weather.destination.visibilityKm);
     candidates.push({
       severity: "low",
-      text: `Метеоусловия в ${input.fromCity} и ${input.toCity} в норме, видимость более ${visibility} км`,
+      text: `Метеоусловия на маршруте ${input.fromCity} — ${input.toCity} в норме`,
     });
   }
 
@@ -442,21 +420,23 @@ function factorsOf(
 
 /** The whole analytics half of the card for one flight on one date. */
 export function forecastFor(input: ForecastInput): Pick<Flight, "history" | "risk"> {
-  const { hours, hour, dayOfYear } = timeAxis(input.date, input.departure);
+  const { hours, hour, day } = timeAxis(input.date, input.departure);
 
   const weather = {
-    origin: weatherAt(input.fromAirport, hours, dayOfYear),
+    origin: weatherAt(input.fromAirport, hours),
     // The API gives no IATA code for the destination, so the city names it.
-    destination: weatherAt(input.toCity, hours, dayOfYear),
+    destination: weatherAt(input.toCity, hours),
   };
-  const rotation = rotationOf(input, hour, weather.origin.impact);
+  const rotation = rotationOf(input, hour, day, weather.origin.impact);
   const history = historyOf(input);
-  const probability = probabilityOf(input, weather, rotation, history.onTimeRate);
+  const probability = probabilityOf(input, weather, rotation, history.onTimeRate, day);
   const level = levelFor(probability);
 
   // The span follows the percentage and the inherited delay rather than being
-  // drawn: "60% risk, 0...10 minutes" would be nonsense.
-  const delayTo = round5(clamp(8 + probability * 1.35 + rotation.delay * 0.55, 10, 180));
+  // drawn: "60% risk, 0...10 minutes" would be nonsense. A low-risk card keeps
+  // it short for the same reason.
+  const span = round5(clamp(8 + probability * 1.35 + rotation.delay * 0.55, 10, 180));
+  const delayTo = level === "LOW" ? Math.min(span, 30) : span;
 
   return {
     history,
@@ -465,7 +445,11 @@ export function forecastFor(input: ForecastInput): Pick<Flight, "history" | "ris
       probability,
       delayFrom: level === "LOW" ? 0 : round5(delayTo * 0.45),
       delayTo,
-      factors: factorsOf(input, weather, rotation, history, hours, hour),
+      // A red line under "low risk" contradicts the headline, so on a low-risk
+      // card the worst a factor gets is amber.
+      factors: factorsOf(input, weather, rotation, history, hours, hour).map((f) =>
+        level === "LOW" && f.severity === "high" ? { ...f, severity: "medium" as const } : f,
+      ),
     },
   };
 }
