@@ -3,6 +3,8 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+/* Низкий экран — в первую очередь телефон, повёрнутый горизонтально. */
+@custom-variant short (@media (max-height: 480px));
 
 /*
  * Design system definition.
