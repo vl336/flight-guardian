@@ -1,13 +1,19 @@
 import type {
   AirportOption,
+  DestinationDays,
   DestinationOption,
   FlightDayStatus,
   FlightSummary,
   LocalDate,
 } from "./graphql-types";
 
-/** Flight schedule API. It allows any origin, so the browser calls it directly. */
-export const GRAPHQL_ENDPOINT = "https://api.airrisk.ru/graphql/";
+/**
+ * Flight schedule API. It allows any origin, so the browser calls it directly.
+ * `VITE_GRAPHQL_ENDPOINT` points a dev build at a local copy of the service.
+ */
+export const GRAPHQL_ENDPOINT =
+  (import.meta.env["VITE_GRAPHQL_ENDPOINT"] as string | undefined) ??
+  "https://api.airrisk.ru/graphql/";
 
 type GraphQLResponse<T> = { data?: T; errors?: Array<{ message: string }> };
 
@@ -42,6 +48,17 @@ const DESTINATIONS_QUERY = `query Destinations($from: String, $date: LocalDate) 
   destinations(filter: { from: $from, date: $date }) {
     title
     flightCount
+  }
+}`;
+
+// Unlike `destinations`, which answers for one day, this returns every
+// destination over a window of dates and the days each one is flown on — so the
+// arrival list can keep cities that just don't fly on the picked date.
+const DESTINATION_DAYS_QUERY = `query DestinationDays($from: String!, $date: LocalDate!, $until: LocalDate!) {
+  destinationDays(filter: { from: $from, date: $date, until: $until }) {
+    title
+    flightCount
+    days { date flightCount }
   }
 }`;
 
@@ -90,6 +107,20 @@ export async function fetchDestinations(
     date,
   });
   return data.destinations;
+}
+
+/** The server rejects windows longer than 31 days, so `until` must stay within that. */
+export async function fetchDestinationDays(
+  from: string,
+  date: LocalDate,
+  until: LocalDate,
+): Promise<DestinationDays[]> {
+  const data = await request<{ destinationDays: DestinationDays[] }>(DESTINATION_DAYS_QUERY, {
+    from,
+    date,
+    until,
+  });
+  return data.destinationDays;
 }
 
 export type FoundFlight = Pick<
@@ -177,5 +208,23 @@ export const addDays = (date: Date, days: number) => {
   return shifted;
 };
 
-/** The schedule only reaches about a week out, so the picker is clamped to it. */
+/** The schedule only reaches about a week out, so that is how many days one window asks for. */
 export const SCHEDULE_WINDOW_DAYS = 7;
+
+/** Last day of the window that starts on `start`. */
+export const windowEnd = (start: LocalDate): LocalDate =>
+  toLocalDate(addDays(new Date(`${start}T00:00:00`), SCHEDULE_WINDOW_DAYS - 1));
+
+/**
+ * The day to move the date to when a city has no flight on it: the first flight
+ * day on or after `date`, else the last one before it. `days` is ascending.
+ */
+export const nearestFlightDay = (days: LocalDate[], date: LocalDate): LocalDate | undefined =>
+  days.find((day) => day >= date) ?? days.at(-1);
+
+const dayLong = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long" });
+const dayShort = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short" });
+
+/** "2026-10-25" -> "25 октября", or "25 окт." when `short`. */
+export const formatDay = (date: LocalDate, short = false) =>
+  (short ? dayShort : dayLong).format(new Date(`${date}T00:00:00`));

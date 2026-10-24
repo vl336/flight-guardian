@@ -23,6 +23,20 @@ export type DestinationOption = {
   flightCount: number;
 };
 
+/** Сколько рейсов в направление вылетает в этот локальный день. */
+export type DestinationDay = {
+  date: LocalDate;
+  flightCount: number;
+};
+
+/** Направление за окно дат: рейсов за всё окно и по каким дням они есть. */
+export type DestinationDays = {
+  title: string;
+  flightCount: number;
+  /** Только дни, где рейсы есть, по возрастанию даты. */
+  days: DestinationDay[];
+};
+
 export type FlightSummary = {
   id: number;
   number: string;
@@ -67,10 +81,11 @@ export type FlightSearchRequestInput = {
   take?: number;
 };
 
-/** The four root queries the API exposes. */
+/** The root queries the API exposes. */
 export type Query = {
   airports: AirportOption[];
   flights: FlightSearchResult;
   destinations: DestinationOption[];
+  destinationDays: DestinationDays[];
   flight: FlightSummary | null;
 };
