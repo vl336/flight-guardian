@@ -208,19 +208,30 @@ export const addDays = (date: Date, days: number) => {
   return shifted;
 };
 
-/** The schedule only reaches about a week out, so that is how many days one window asks for. */
-export const SCHEDULE_WINDOW_DAYS = 7;
+/**
+ * How many days one `destinationDays` window covers. The schedule only reaches
+ * about a week out, but the window starts today, so a date picked a few days
+ * ahead still sees flight days on both sides of it.
+ */
+export const SCHEDULE_WINDOW_DAYS = 14;
 
 /** Last day of the window that starts on `start`. */
 export const windowEnd = (start: LocalDate): LocalDate =>
   toLocalDate(addDays(new Date(`${start}T00:00:00`), SCHEDULE_WINDOW_DAYS - 1));
 
 /**
- * The day to move the date to when a city has no flight on it: the first flight
- * day on or after `date`, else the last one before it. `days` is ascending.
+ * The flight day closest to `date`, before or after it; a tie goes to the later
+ * day, since people look ahead.
  */
-export const nearestFlightDay = (days: LocalDate[], date: LocalDate): LocalDate | undefined =>
-  days.find((day) => day >= date) ?? days.at(-1);
+export const nearestFlightDay = (days: LocalDate[], date: LocalDate): LocalDate | undefined => {
+  const target = Date.parse(date);
+  return days.reduce<LocalDate | undefined>((best, day) => {
+    if (best === undefined) return day;
+    const gap = Math.abs(Date.parse(day) - target);
+    const bestGap = Math.abs(Date.parse(best) - target);
+    return gap < bestGap || (gap === bestGap && day > best) ? day : best;
+  }, undefined);
+};
 
 const dayLong = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long" });
 const dayShort = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short" });
