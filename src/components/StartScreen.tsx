@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { ArrowRight, Plane } from "lucide-react";
+import { ArrowRight, CloudSun, Link2, Plane, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { reachGoal } from "@/lib/analytics";
 import { checkHumanClick } from "@/lib/human-check";
@@ -14,6 +14,15 @@ const STARTED_CLASS = "airrisk-started";
 // посетитель, уже прошедший заставку, видел бы её мельком на каждой
 // перезагрузке — React узнаёт про sessionStorage только после гидрации.
 const earlyHideScript = `try{if(sessionStorage.getItem(${JSON.stringify(STARTED_KEY)}))document.documentElement.classList.add(${JSON.stringify(STARTED_CLASS)})}catch(e){}`;
+
+// Метки вместо описания: их схватывают взглядом, а не читают. Без них
+// экран с одной кнопкой похож на рекламную прокладку, а с ними видно,
+// что за кнопкой настоящий сервис.
+const TAGS = [
+  { icon: Link2, label: "Цепочка бортов" },
+  { icon: CloudSun, label: "Погода" },
+  { icon: ShieldAlert, label: "«Ковёр»" },
+];
 
 type Props = {
   onStart: () => void;
@@ -86,10 +95,21 @@ export function StartScreen({ onStart }: Props) {
             <p className="mt-4 text-base text-primary-foreground/75 sm:text-lg">
               Покажем риск задержки или отмены вашего рейса
             </p>
+            <ul className="mt-6 flex flex-wrap justify-center gap-2">
+              {TAGS.map(({ icon: Icon, label }) => (
+                <li
+                  key={label}
+                  className="flex items-center gap-1.5 rounded-full border border-primary-foreground/15 bg-primary-foreground/5 px-3 py-1.5 text-sm font-semibold"
+                >
+                  <Icon className="h-4 w-4 text-sky" />
+                  {label}
+                </li>
+              ))}
+            </ul>
             <Button
               size="lg"
               onClick={handleClick}
-              className="mt-10 h-14 w-full max-w-xs rounded-2xl text-base font-bold"
+              className="mt-8 h-14 w-full max-w-xs rounded-2xl text-base font-bold"
             >
               Начать проверку
               <ArrowRight className="ml-1 h-5 w-5" />
