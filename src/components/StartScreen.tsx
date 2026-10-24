@@ -15,13 +15,14 @@ const STARTED_CLASS = "airrisk-started";
 // перезагрузке — React узнаёт про sessionStorage только после гидрации.
 const earlyHideScript = `try{if(sessionStorage.getItem(${JSON.stringify(STARTED_KEY)}))document.documentElement.classList.add(${JSON.stringify(STARTED_CLASS)})}catch(e){}`;
 
-// Метки вместо описания: их схватывают взглядом, а не читают. Без них
-// экран с одной кнопкой похож на рекламную прокладку, а с ними видно,
-// что за кнопкой настоящий сервис.
-const TAGS = [
-  { icon: Link2, label: "Цепочка бортов" },
-  { icon: CloudSun, label: "Погода" },
-  { icon: ShieldAlert, label: "«Ковёр»" },
+// По строке на каждый источник риска: видно, зачем сюда пришли, но это не
+// абзац, который надо читать. Без них экран с одной кнопкой похож на
+// рекламную прокладку. Метки в ряд пробовали — на телефоне переносились
+// лесенкой. Про «Ковёр» — без времени и без «прямо сейчас».
+const REASONS = [
+  { icon: Link2, text: "Задержки самолёта на прошлых рейсах" },
+  { icon: ShieldAlert, text: "Режим «Ковёр» и закрытия аэропортов" },
+  { icon: CloudSun, text: "Погода в городах вылета и прилёта" },
 ];
 
 type Props = {
@@ -88,21 +89,22 @@ export function StartScreen({ onStart }: Props) {
           <div className="flex flex-1 flex-col items-center justify-center py-10 text-center">
             <h1
               id="start-screen-title"
-              className="text-3xl leading-tight font-black sm:text-5xl sm:leading-tight"
+              className="text-3xl leading-tight font-black text-balance sm:text-5xl sm:leading-tight"
             >
               Узнайте о задержке рейса раньше табло
             </h1>
-            <p className="mt-4 text-base text-primary-foreground/75 sm:text-lg">
+            <p className="mt-4 text-base text-balance text-primary-foreground/75 sm:text-lg">
               Покажем риск задержки или отмены вашего рейса
             </p>
-            <ul className="mt-6 flex flex-wrap justify-center gap-2">
-              {TAGS.map(({ icon: Icon, label }) => (
-                <li
-                  key={label}
-                  className="flex items-center gap-1.5 rounded-full border border-primary-foreground/15 bg-primary-foreground/5 px-3 py-1.5 text-sm font-semibold"
-                >
-                  <Icon className="h-4 w-4 text-sky" />
-                  {label}
+            <ul className="mx-auto mt-6 grid w-fit gap-2.5 text-left">
+              {REASONS.map(({ icon: Icon, text }) => (
+                <li key={text} className="flex items-center gap-3">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-primary-foreground/10">
+                    <Icon className="h-4 w-4 text-sky" />
+                  </span>
+                  <span className="text-sm font-semibold text-primary-foreground/90 sm:text-base">
+                    {text}
+                  </span>
                 </li>
               ))}
             </ul>
