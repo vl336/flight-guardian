@@ -209,11 +209,11 @@ export const addDays = (date: Date, days: number) => {
 };
 
 /**
- * How many days one `destinationDays` window covers. The schedule only reaches
- * about a week out, but the window starts today, so a date picked a few days
- * ahead still sees flight days on both sides of it.
+ * How many days one `destinationDays` window covers — the most the server returns
+ * at once (31). The schedule itself only reaches about a week out; the window
+ * starts today, so every flight day the schedule has is in it.
  */
-export const SCHEDULE_WINDOW_DAYS = 14;
+export const SCHEDULE_WINDOW_DAYS = 31;
 
 /** Last day of the window that starts on `start`. */
 export const windowEnd = (start: LocalDate): LocalDate =>

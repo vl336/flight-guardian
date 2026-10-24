@@ -2,12 +2,11 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, CalendarDays, PlaneTakeoff, PlaneLanding } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { CityCombobox } from "@/components/CityCombobox";
+import { DatePicker } from "@/components/DatePicker";
 import {
   fetchDepartureCities,
   fetchDestinationDays,
-  addDays,
   formatDay,
   nearestFlightDay,
   toLocalDate,
@@ -34,15 +33,12 @@ export function SearchWidget({ onSearch, loading }: Props) {
     staleTime: 60 * 60 * 1000,
   });
 
-  // Список «куда» строится не на одну дату, а на окно в две недели от сегодня: города,
-  // в которые сегодня не летают, но летают завтра, остаются в списке и не пропадают при
-  // смене даты, а ближайший рейс ищется и вперёд, и назад от выбранного дня. Окно
-  // двигается, только когда выбрали дату вне него, — сдвиг даты внутри окна
-  // (см. selectCity) не вызывает нового запроса.
-  const [windowStart, setWindowStart] = useState(today);
+  // Список «куда» и календарь строятся не на одну дату, а на весь месяц вперёд от
+  // сегодня одним запросом: города, в которые сегодня не летают, но летают завтра,
+  // остаются в списке, а в календаре видно, по каким дням маршрут вообще летает.
   const destinations = useQuery({
-    queryKey: ["destination-days", from, windowStart],
-    queryFn: () => fetchDestinationDays(from, windowStart, windowEnd(windowStart)),
+    queryKey: ["destination-days", from],
+    queryFn: () => fetchDestinationDays(from, today, windowEnd(today)),
     enabled: from !== "",
     staleTime: 5 * 60 * 1000,
   });
@@ -55,15 +51,34 @@ export function SearchWidget({ onSearch, loading }: Props) {
     [destinations.data],
   );
   const loaded = destinations.data !== undefined;
+
+  // Последний день, на который в расписании вообще есть рейсы из этого города.
+  // Дальше расписания нет: «данных нет» не значит «рейсов нет», поэтому такие дни
+  // не блокируем.
+  const horizon = useMemo(() => {
+    let last = "";
+    for (const d of destinations.data ?? []) {
+      for (const day of d.days) if (day.date > last) last = day.date;
+    }
+    return last || undefined;
+  }, [destinations.data]);
+  // Дни, в которые из города летит хоть что-то, — для календаря, пока «куда» не выбрано.
+  const departureDays = useMemo(
+    () => new Set((destinations.data ?? []).flatMap((d) => d.days.map((day) => day.date))),
+    [destinations.data],
+  );
+
   const toDays = to ? daysByCity.get(to) : undefined;
   const flownOnDate = Boolean(toDays?.some((day) => day.date === date));
+  // Выбранная дата попадает в расписание (а не за его горизонт).
+  const dateKnown = horizon !== undefined && date <= horizon;
 
-  const ready = Boolean(from && to && date && from !== to && flownOnDate);
+  const ready = Boolean(from && to && date && from !== to && (flownOnDate || !dateKnown));
 
-  // В выбранный день в этот город не летают, но в другие дни окна — летают: вместо
+  // В выбранный день в этот город не летают, но в другие дни расписания — летают: вместо
   // серой кнопки предлагаем перейти на ближайший такой день.
   const nearestDay =
-    loaded && from && to && from !== to && !flownOnDate
+    loaded && from && to && from !== to && dateKnown && !flownOnDate
       ? nearestFlightDay(
           (toDays ?? []).map((day) => day.date),
           date,
@@ -73,16 +88,20 @@ export function SearchWidget({ onSearch, loading }: Props) {
   const changeDate = (next: string) => {
     setDate(next);
     setShiftedFrom(null);
-    if (next && (next < windowStart || next > windowEnd(windowStart))) {
-      // Окно с запасом назад, чтобы рядом с выбранным днём были дни и до него.
-      const back = toLocalDate(addDays(new Date(`${next}T00:00:00`), -7));
-      setWindowStart(back < today ? today : back);
-    }
+  };
+
+  // Для календаря: true — летают, false — не летают, undefined — расписания на этот
+  // день ещё нет (или город отправления не выбран) и день открыт.
+  const flightsOn = (day: string): boolean | undefined => {
+    if (!from || !loaded || horizon === undefined || day > horizon) return undefined;
+    return to ? Boolean(daysByCity.get(to)?.some((d) => d.date === day)) : departureDays.has(day);
   };
 
   // Города, в которые летают в выбранный день, идут первыми с числом рейсов;
   // остальные — отдельной приглушённой группой, с ближайшим днём вместо числа.
+  // За горизонтом расписания различать нечего: все города обычные.
   const options = (destinations.data ?? []).map((d) => {
+    if (!dateKnown) return { value: d.title };
     const count = d.days.find((day) => day.date === date)?.flightCount;
     if (count) return { value: d.title, hint: `${count} рейс${plural(count)}` };
     const nearest = nearestFlightDay(
@@ -107,10 +126,13 @@ export function SearchWidget({ onSearch, loading }: Props) {
       setTo(city);
       // Города, в который в этот день не летают, не отказываем, а сдвигаем дату
       // на ближайший день с рейсом: человек выбрал, куда лететь, дата вторична.
-      const next = nearestFlightDay(
-        (daysByCity.get(city) ?? []).map((day) => day.date),
-        date,
-      );
+      // Дату за горизонтом расписания не трогаем: про неё ещё ничего не известно.
+      const next = dateKnown
+        ? nearestFlightDay(
+            (daysByCity.get(city) ?? []).map((day) => day.date),
+            date,
+          )
+        : undefined;
       dateShifted = Boolean(next && next !== date);
       setShiftedFrom(dateShifted ? date : null);
       if (next && dateShifted) setDate(next);
@@ -156,18 +178,19 @@ export function SearchWidget({ onSearch, loading }: Props) {
           loading={destinations.isFetching}
         />
 
-        <div className="relative">
-          <CalendarDays className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="date"
-            value={date}
-            min={today}
-            onChange={(e) => changeDate(e.target.value)}
-            aria-label="Дата вылета"
-            title="Дата вылета"
-            className="h-14 rounded-2xl border-border bg-secondary/60 pl-9 text-base text-foreground"
-          />
-        </div>
+        <DatePicker
+          value={date}
+          onChange={changeDate}
+          min={today}
+          flightsOn={flightsOn}
+          legend={loaded && horizon !== undefined}
+          note={
+            horizon
+              ? `После ${formatDay(horizon)} расписания пока нет — дату выбрать можно.`
+              : undefined
+          }
+          label="Дата вылета"
+        />
 
         {nearestDay ? (
           // Не submit: ищем уже после перехода на день с рейсами, отдельным нажатием.
@@ -206,7 +229,7 @@ export function SearchWidget({ onSearch, loading }: Props) {
           </p>
         )}
 
-        {loaded && from && to && from !== to && !flownOnDate && !shiftedFrom && (
+        {loaded && from && to && from !== to && dateKnown && !flownOnDate && !shiftedFrom && (
           <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground sm:col-span-2 lg:col-span-3">
             {toDays?.length ? (
               <>
@@ -226,8 +249,7 @@ export function SearchWidget({ onSearch, loading }: Props) {
               </>
             ) : (
               <span>
-                {from} → {to}: с {formatDay(windowStart)} по {formatDay(windowEnd(windowStart))}{" "}
-                рейсов нет.
+                {from} → {to}: до {formatDay(horizon!)} рейсов нет.
               </span>
             )}
           </div>
