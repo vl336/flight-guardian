@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight,
@@ -50,43 +50,29 @@ type Props = {
 };
 
 export function CityOverview({ date, onFindFlight, onDirection }: Props) {
-  const [open, setOpen] = useState<string | null>(null);
-  // Анимируется только плашка, по которой кликнули. Та, что закрывается из-за
-  // открытия другой, схлопывается сразу: иначе 300 мс всё под ней, включая
-  // нажатую плашку, уезжало бы вверх на её высоту — экран дёргался.
-  const [clicked, setClicked] = useState<string | null>(null);
-  // Где была нажатая плашка до клика — после перестройки вернём её туда же.
-  const anchor = useRef<{ node: HTMLElement; top: number } | null>(null);
+  // Плашки открываются независимо. Если открытие одной закрывало бы другую,
+  // при открытии нижней верхняя схлопывалась бы и экран уезжал вверх.
+  const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
 
-  const toggle = (city: string, node: HTMLElement) => {
-    const next = open === city ? null : city;
-    if (next) reachGoal("city_open", { city });
-    anchor.current = { node, top: node.getBoundingClientRect().top };
-    setClicked(city);
-    setOpen(next);
+  const toggle = (city: string) => {
+    const next = new Set(open);
+    if (next.delete(city)) {
+      setOpen(next);
+      return;
+    }
+    reachGoal("city_open", { city });
+    setOpen(next.add(city));
   };
 
-  // До отрисовки, чтобы сдвиг не успел мелькнуть. Своё якорение браузера в
-  // списке выключено (overflow-anchor), иначе он поправлял бы прокрутку вперёд
-  // нас по элементу внутри схлопнувшейся панели.
-  useLayoutEffect(() => {
-    const saved = anchor.current;
-    anchor.current = null;
-    if (!saved) return;
-    const shift = saved.node.getBoundingClientRect().top - saved.top;
-    if (Math.abs(shift) > 0.5) window.scrollBy(0, shift);
-  }, [open]);
-
   return (
-    <div className="grid gap-4 [overflow-anchor:none]">
+    <div className="grid gap-4">
       {CITIES.map((info) => (
         <CityCard
           key={info.city}
           info={info}
           date={date}
-          open={open === info.city}
-          animate={clicked === info.city}
-          onToggle={(node) => toggle(info.city, node)}
+          open={open.has(info.city)}
+          onToggle={() => toggle(info.city)}
           onFindFlight={() => onFindFlight(info.city)}
           onDirection={(destination) => onDirection(info.city, destination)}
         />
@@ -99,13 +85,12 @@ type CardProps = {
   info: CityInfo;
   date: LocalDate;
   open: boolean;
-  animate: boolean;
-  onToggle: (node: HTMLElement) => void;
+  onToggle: () => void;
   onFindFlight: () => void;
   onDirection: (destination: string) => void;
 };
 
-function CityCard({ info, date, open, animate, onToggle, onFindFlight, onDirection }: CardProps) {
+function CityCard({ info, date, open, onToggle, onFindFlight, onDirection }: CardProps) {
   const overview = useMemo(() => overviewFor(info, date), [info, date]);
   const level = levelStyles[overview.level];
 
@@ -130,7 +115,7 @@ function CityCard({ info, date, open, animate, onToggle, onFindFlight, onDirecti
     <article className="overflow-hidden rounded-3xl shadow-card">
       <button
         type="button"
-        onClick={(e) => onToggle(e.currentTarget)}
+        onClick={onToggle}
         aria-expanded={open}
         aria-controls={panelId}
         className="group relative block w-full overflow-hidden p-5 text-left text-primary-foreground sm:p-6"
@@ -182,7 +167,7 @@ function CityCard({ info, date, open, animate, onToggle, onFindFlight, onDirecti
       {/* grid-rows 0fr → 1fr анимирует высоту без замеров в JS. */}
       <div
         id={panelId}
-        className={`grid ${animate ? "transition-[grid-template-rows] duration-300 ease-out" : ""} ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+        className={`grid transition-[grid-template-rows] duration-300 ease-out ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
       >
         <div className="min-h-0 overflow-hidden bg-card" inert={!open}>
           <div className="grid gap-6 p-5 sm:p-6">
