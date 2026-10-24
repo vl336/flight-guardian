@@ -178,7 +178,7 @@ function Index() {
                 <ArrowLeft className="mr-1 h-4 w-4" />
                 Назад к списку рейсов
               </Button>
-              <FlightAnalytics flight={toAnalyticsFlight(flight, params.date)} />
+              <FlightAnalytics flight={toAnalyticsFlight(flight, params.date)} date={params.date} />
             </div>
           ) : flights.data ? (
             <FlightResults route={route} result={flights.data} onSelect={handleSelect} />

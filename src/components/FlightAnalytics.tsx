@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import {
   ArrowRight,
   ShieldCheck,
@@ -8,13 +8,11 @@ import {
   Clock,
   CalendarClock,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
+import { SubscribeBlock } from "@/components/SubscribeBlock";
 import { RISK_LABEL, type Flight, type RiskLevel } from "@/lib/flight-data";
 import { reachGoal } from "@/lib/analytics";
-
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import type { LocalDate } from "@/lib/graphql-types";
+import { flightBotLink } from "@/lib/telegram-bot";
 
 const riskStyles: Record<
   RiskLevel,
@@ -56,31 +54,16 @@ function Bar({ label, value, className }: { label: string; value: number; classN
   );
 }
 
-export function FlightAnalytics({ flight }: { flight: Flight }) {
+type Props = {
+  flight: Flight;
+  /** Дата вылета: в Flight её нет, а бот ждёт рейс вместе с датой. */
+  date: LocalDate;
+};
+
+export function FlightAnalytics({ flight, date }: Props) {
   const [openFactors, setOpenFactors] = useState(true);
-  const [email, setEmail] = useState("");
-  const [touched, setTouched] = useState(false);
   const risk = riskStyles[flight.risk.level];
   const RiskIcon = risk.icon;
-
-  const isValidEmail = useMemo(() => emailRegex.test(email.trim()), [email]);
-  const showError = touched && email.length > 0 && !isValidEmail;
-
-  const handleSubscribe = () => {
-    const clean = email.trim();
-    if (!emailRegex.test(clean)) return;
-    // Сам адрес в Метрику не уходит — только рейс и его риск.
-    reachGoal("subscribe_email", {
-      flight: flight.flightNumber,
-      risk_level: flight.risk.level,
-      risk_probability: flight.risk.probability,
-    });
-    toast.success("Успешно подписались", {
-      description: `Если узнаем что-то новое по рейсу ${flight.flightNumber}, напишем вам на ${clean}.`,
-    });
-    setEmail("");
-    setTouched(false);
-  };
 
   return (
     <div className="space-y-4">
@@ -203,72 +186,25 @@ export function FlightAnalytics({ flight }: { flight: Flight }) {
         )}
       </div>
 
-      <div className="rounded-3xl bg-hero p-5 text-primary-foreground shadow-card sm:p-6">
-        <h3 className="text-xl font-extrabold">
-          Хотите следить за изменением риска по этому рейсу?
-        </h3>
-        <p className="mt-2 text-sm text-primary-foreground/75">
-          Введите email — мы пришлём уведомление, если риск изменится.
-        </p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
-          <Input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            onBlur={() => setTouched(true)}
-            placeholder="Введите ваш email"
-            aria-label="Email для подписки"
-            aria-invalid={showError}
-            className="h-13 rounded-2xl border-transparent bg-card text-base text-foreground placeholder:text-muted-foreground"
-          />
-          <Button
-            disabled={!isValidEmail}
-            onClick={handleSubscribe}
-            className="h-13 rounded-2xl bg-sky text-base font-bold hover:bg-sky/90 disabled:opacity-60"
-          >
-            Подписаться
-          </Button>
-        </div>
-        {showError && (
-          <p className="mt-2 text-sm font-semibold text-danger">
-            Введите корректный email, например name@example.com
-          </p>
-        )}
-        <div className="mt-4 rounded-2xl bg-card/10 p-4 text-sm">
-          <p className="font-semibold text-primary-foreground">Telegram-бот</p>
-          <p className="mt-1 text-primary-foreground/75">
-            Удобнее в Telegram — бот пришлёт алерт, если задержка начнёт расти.
-          </p>
-          <a
-            href="https://t.me/riskbotair"
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() =>
-              reachGoal("messenger_click", { messenger: "telegram", flight: flight.flightNumber })
-            }
-            className="mt-2 inline-block font-bold text-sky hover:underline"
-          >
-            @riskbotair →
-          </a>
-        </div>
-        <div className="mt-3 rounded-2xl bg-card/10 p-4 text-sm">
-          <p className="font-semibold text-primary-foreground">Мессенджер Макс</p>
-          <p className="mt-1 text-primary-foreground/75">
-            Подписывайтесь в Макс — получайте уведомления, если рейс начнёт задерживаться.
-          </p>
-          <a
-            href="https://max.ru/riskbotair"
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() =>
-              reachGoal("messenger_click", { messenger: "max", flight: flight.flightNumber })
-            }
-            className="mt-2 inline-block font-bold text-sky hover:underline"
-          >
-            @riskbotair в Макс →
-          </a>
-        </div>
-      </div>
+      <SubscribeBlock
+        title={`Следить за риском по рейсу ${flight.flightNumber}`}
+        text="Напишем, если риск задержки изменится или рейс начнут сдвигать."
+        subject={`рейс ${flight.flightNumber}`}
+        successText={(email) =>
+          `Если узнаем что-то новое по рейсу ${flight.flightNumber}, напишем вам на ${email}.`
+        }
+        telegramHref={flightBotLink(flight.flightNumber, date)}
+        onSubscribe={(channel) =>
+          // Сам адрес в Метрику не уходит — только рейс и его риск.
+          channel === "email"
+            ? reachGoal("subscribe_email", {
+                flight: flight.flightNumber,
+                risk_level: flight.risk.level,
+                risk_probability: flight.risk.probability,
+              })
+            : reachGoal("messenger_click", { messenger: channel, flight: flight.flightNumber })
+        }
+      />
     </div>
   );
 }
