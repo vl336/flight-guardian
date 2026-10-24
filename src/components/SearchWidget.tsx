@@ -7,6 +7,7 @@ import { CityCombobox } from "@/components/CityCombobox";
 import {
   fetchDepartureCities,
   fetchDestinationDays,
+  addDays,
   formatDay,
   nearestFlightDay,
   toLocalDate,
@@ -33,10 +34,11 @@ export function SearchWidget({ onSearch, loading }: Props) {
     staleTime: 60 * 60 * 1000,
   });
 
-  // Список «куда» строится не на одну дату, а на окно в неделю: города, в которые
-  // сегодня не летают, но летают завтра, остаются в списке и не пропадают при смене
-  // даты. Окно двигается, только когда выбрали дату вне него, — сдвиг даты внутри
-  // окна (см. selectCity) не вызывает нового запроса.
+  // Список «куда» строится не на одну дату, а на окно в две недели от сегодня: города,
+  // в которые сегодня не летают, но летают завтра, остаются в списке и не пропадают при
+  // смене даты, а ближайший рейс ищется и вперёд, и назад от выбранного дня. Окно
+  // двигается, только когда выбрали дату вне него, — сдвиг даты внутри окна
+  // (см. selectCity) не вызывает нового запроса.
   const [windowStart, setWindowStart] = useState(today);
   const destinations = useQuery({
     queryKey: ["destination-days", from, windowStart],
@@ -58,10 +60,24 @@ export function SearchWidget({ onSearch, loading }: Props) {
 
   const ready = Boolean(from && to && date && from !== to && flownOnDate);
 
+  // В выбранный день в этот город не летают, но в другие дни окна — летают: вместо
+  // серой кнопки предлагаем перейти на ближайший такой день.
+  const nearestDay =
+    loaded && from && to && from !== to && !flownOnDate
+      ? nearestFlightDay(
+          (toDays ?? []).map((day) => day.date),
+          date,
+        )
+      : undefined;
+
   const changeDate = (next: string) => {
     setDate(next);
     setShiftedFrom(null);
-    if (next && (next < windowStart || next > windowEnd(windowStart))) setWindowStart(next);
+    if (next && (next < windowStart || next > windowEnd(windowStart))) {
+      // Окно с запасом назад, чтобы рядом с выбранным днём были дни и до него.
+      const back = toLocalDate(addDays(new Date(`${next}T00:00:00`), -7));
+      setWindowStart(back < today ? today : back);
+    }
   };
 
   // Города, в которые летают в выбранный день, идут первыми с числом рейсов;
@@ -153,14 +169,26 @@ export function SearchWidget({ onSearch, loading }: Props) {
           />
         </div>
 
-        <Button
-          type="submit"
-          disabled={loading || !ready}
-          className="h-14 rounded-2xl text-base font-bold sm:col-span-2 lg:col-span-3"
-        >
-          <Search className="mr-1 h-5 w-5" />
-          {loading ? "Ищем рейсы..." : "Найти рейсы"}
-        </Button>
+        {nearestDay ? (
+          // Не submit: ищем уже после перехода на день с рейсами, отдельным нажатием.
+          <Button
+            type="button"
+            onClick={() => changeDate(nearestDay)}
+            className="h-14 rounded-2xl text-base font-bold sm:col-span-2 lg:col-span-3"
+          >
+            <CalendarDays className="mr-1 h-5 w-5" />
+            Ближайший рейс: {formatDay(nearestDay, true)}
+          </Button>
+        ) : (
+          <Button
+            type="submit"
+            disabled={loading || !ready}
+            className="h-14 rounded-2xl text-base font-bold sm:col-span-2 lg:col-span-3"
+          >
+            <Search className="mr-1 h-5 w-5" />
+            {loading ? "Ищем рейсы..." : "Найти рейсы"}
+          </Button>
+        )}
 
         {shiftedFrom && (
           <p className="text-sm text-muted-foreground sm:col-span-2 lg:col-span-3">
