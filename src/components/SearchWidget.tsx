@@ -5,19 +5,30 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CityCombobox } from "@/components/CityCombobox";
 import { fetchDepartureCities, fetchDestinations, toLocalDate, type SearchParams } from "@/lib/api";
-import { reachGoal } from "@/lib/analytics";
+import { reachGoal, type SearchSource } from "@/lib/analytics";
 
 type Props = {
   onSearch: (params: SearchParams) => void;
   loading: boolean;
+  /** Уходит в search_submit, см. SearchSource. */
+  source: SearchSource;
+  /** Стартовые значения полей. Читаются только при монтировании — для смены нужен новый key. */
+  initialFrom?: string | undefined;
+  initialTo?: string | undefined;
 };
 
 const today = toLocalDate(new Date());
 
-export function SearchWidget({ onSearch, loading }: Props) {
+export function SearchWidget({
+  onSearch,
+  loading,
+  source,
+  initialFrom = "",
+  initialTo = "",
+}: Props) {
   const [date, setDate] = useState(today);
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [from, setFrom] = useState(initialFrom);
+  const [to, setTo] = useState(initialTo);
 
   const cities = useQuery({
     queryKey: ["departure-cities"],
@@ -56,11 +67,11 @@ export function SearchWidget({ onSearch, loading }: Props) {
   return (
     <div className="rounded-3xl bg-card p-4 shadow-float sm:p-5">
       <form
-        className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+        className="grid gap-3 sm:grid-cols-2 md:grid-cols-3"
         onSubmit={(e) => {
           e.preventDefault();
           if (!ready || loading) return;
-          reachGoal("search_submit", { from, to, date, days_ahead: daysAhead });
+          reachGoal("search_submit", { from, to, date, days_ahead: daysAhead, source });
           onSearch({ from, to, date });
         }}
       >
@@ -109,14 +120,14 @@ export function SearchWidget({ onSearch, loading }: Props) {
         <Button
           type="submit"
           disabled={loading || !ready}
-          className="h-14 rounded-2xl text-base font-bold sm:col-span-2 lg:col-span-3"
+          className="h-14 rounded-2xl text-base font-bold md:col-span-3"
         >
           <Search className="mr-1 h-5 w-5" />
           {loading ? "Ищем рейсы..." : "Найти рейсы"}
         </Button>
 
         {from && to && from === to && (
-          <p className="text-sm text-destructive sm:col-span-2 lg:col-span-3">
+          <p className="text-sm text-destructive sm:col-span-2 md:col-span-3">
             Города отправления и прибытия должны различаться.
           </p>
         )}

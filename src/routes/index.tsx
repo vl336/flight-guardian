@@ -7,9 +7,16 @@ import { SearchWidget } from "@/components/SearchWidget";
 import { StartScreen, STARTED_KEY } from "@/components/StartScreen";
 import { FlightResults } from "@/components/FlightResults";
 import { FlightAnalytics } from "@/components/FlightAnalytics";
+import { CityOverview } from "@/components/CityOverview";
 import { toAnalyticsFlight } from "@/lib/flight-data";
-import { fetchFlights, STATUS_LABEL, type FoundFlight, type SearchParams } from "@/lib/api";
-import { reachGoal } from "@/lib/analytics";
+import {
+  fetchFlights,
+  STATUS_LABEL,
+  toLocalDate,
+  type FoundFlight,
+  type SearchParams,
+} from "@/lib/api";
+import { reachGoal, type SearchSource } from "@/lib/analytics";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -31,6 +38,14 @@ export const Route = createFileRoute("/")({
   }),
   component: Index,
 });
+
+const today = toLocalDate(new Date());
+const todayLabel = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long" }).format(
+  new Date(),
+);
+
+/** С чего открыть форму поиска: город из плашки и, если нажали направление, город прибытия. */
+type SearchSeed = { from: string; to?: string | undefined; key: number };
 
 function Index() {
   // Заставку показываем один раз за сессию. На сервере sessionStorage нет,
@@ -59,10 +74,55 @@ function Index() {
   const loading = params !== null && flights.isFetching;
   const route = params ? `${params.from} → ${params.to}` : "";
 
-  const handleSearch = (next: SearchParams) => {
+  // Откуда начат текущий поиск — уходит в цели выдачи и рейса вслед за search_submit.
+  const [searchSource, setSearchSource] = useState<SearchSource>("form");
+  // Пришли ли к форме из плашки города: тогда её отправка — city_form, а не form.
+  const [fromCity, setFromCity] = useState(false);
+
+  const handleSearch = (next: SearchParams, source: SearchSource) => {
     setFlight(null);
+    setSearchSource(source);
     setParams(next);
   };
+
+  // Форма поиска под плашками видна всегда. Плашка города только подставляет в
+  // неё значения и прокручивает к ней — key 0 значит, что этого ещё не было.
+  const [seed, setSeed] = useState<SearchSeed>({ from: "", key: 0 });
+  const searchRef = useRef<HTMLElement>(null);
+
+  const openSearch = (from: string, to?: string) => {
+    setSeed((prev) => ({ from, to, key: prev.key + 1 }));
+    setFromCity(true);
+    if (to) {
+      // Форму тут не отправляют, поэтому search_submit шлём сами — иначе
+      // воронка от поиска к рейсу теряла бы всех, кто пришёл через направление.
+      reachGoal("search_submit", { from, to, date: today, days_ahead: 0, source: "direction" });
+      handleSearch({ from, to, date: today }, "direction");
+    } else {
+      setFlight(null);
+      setParams(null);
+    }
+  };
+
+  const handleFindFlight = (city: string) => {
+    reachGoal("city_find_flight", { city });
+    openSearch(city);
+  };
+
+  const handleDirection = (city: string, destination: string) => {
+    reachGoal("direction_click", { city, destination, route: `${city} → ${destination}` });
+    openSearch(city, destination);
+  };
+
+  useEffect(() => {
+    const node = searchRef.current;
+    if (!node || seed.key === 0) return;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const frame = requestAnimationFrame(() => {
+      node.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [seed]);
 
   const handleSelect = (next: FoundFlight) => {
     reachGoal("flight_open", {
@@ -70,6 +130,7 @@ function Index() {
       number: next.number,
       status: STATUS_LABEL[next.status],
       shift_minutes: next.shiftMinutes,
+      source: searchSource,
     });
     setFlight(next);
   };
@@ -90,17 +151,24 @@ function Index() {
     reportedResult.current = key;
 
     if (flights.isError) {
-      reachGoal("search_result", { result: "error", route, message: flights.error.message });
+      reachGoal("search_result", {
+        result: "error",
+        route,
+        message: flights.error.message,
+        source: searchSource,
+      });
     } else if (flights.data) {
       reachGoal("search_result", {
         result: flights.data.items.length > 0 ? "ok" : "empty",
         route,
         count: flights.data.totalCount,
+        source: searchSource,
       });
     }
   }, [
     params,
     route,
+    searchSource,
     flights.isFetching,
     flights.isError,
     flights.error,
@@ -146,44 +214,67 @@ function Index() {
 
       <section className="bg-hero px-4 pt-10 pb-24 text-primary-foreground">
         <div className="mx-auto max-w-3xl text-center">
-          <h1 className="text-3xl leading-tight font-black sm:text-4xl">
-            Узнайте реальный риск задержки или отмены вашего рейса
+          <p className="mx-auto w-fit rounded-full bg-primary-foreground/10 px-3 py-1 text-xs font-bold tracking-wide uppercase">
+            Сегодня, {todayLabel}
+          </p>
+          <h1 className="mt-4 text-3xl leading-tight font-black sm:text-4xl">
+            Как сейчас летают из вашего города
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-sm text-primary-foreground/75 sm:text-base">
-            Анализ цепочек бортов, метеоусловий и исторической пунктуальности до официального табло
+            Выберите город — покажем пунктуальность, пики задержек и обстановку в аэропортах. Свой
+            рейс можно найти потом, номер помнить не обязательно.
           </p>
         </div>
       </section>
 
       <main className="mx-auto -mt-16 max-w-3xl px-4 pb-16">
-        <SearchWidget onSearch={handleSearch} loading={loading} />
+        <CityOverview date={today} onFindFlight={handleFindFlight} onDirection={handleDirection} />
 
-        <div className="mt-6">
-          {params === null ? (
-            <Placeholder />
-          ) : loading ? (
-            <div className="grid place-items-center gap-3 rounded-3xl bg-card p-12 text-center shadow-card">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="font-semibold">Ищем рейсы...</p>
-            </div>
-          ) : flights.isError ? (
-            <Failed message={flights.error.message} onRetry={handleRetry} />
-          ) : flight ? (
-            <div ref={detailsRef} className="grid scroll-mt-4 gap-4">
-              <Button
-                variant="ghost"
-                onClick={() => setFlight(null)}
-                className="w-fit rounded-2xl font-semibold"
-              >
-                <ArrowLeft className="mr-1 h-4 w-4" />
-                Назад к списку рейсов
-              </Button>
-              <FlightAnalytics flight={toAnalyticsFlight(flight, params.date)} date={params.date} />
-            </div>
-          ) : flights.data ? (
-            <FlightResults route={route} result={flights.data} onSelect={handleSelect} />
-          ) : null}
-        </div>
+        <section ref={searchRef} className="mt-10 scroll-mt-4">
+          <h2 className="text-2xl font-black">Проверить конкретный рейс</h2>
+          <p className="mt-1 mb-4 text-sm text-muted-foreground">
+            Выберите направление и дату — покажем все рейсы и риск задержки по каждому.
+          </p>
+          <SearchWidget
+            key={seed.key}
+            initialFrom={seed.from}
+            initialTo={seed.to}
+            onSearch={(next) => handleSearch(next, fromCity ? "city_form" : "form")}
+            source={fromCity ? "city_form" : "form"}
+            loading={loading}
+          />
+
+          <div className="mt-6">
+            {params === null ? (
+              <Placeholder />
+            ) : loading ? (
+              <div className="grid place-items-center gap-3 rounded-3xl bg-card p-12 text-center shadow-card">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="font-semibold">Ищем рейсы...</p>
+              </div>
+            ) : flights.isError ? (
+              <Failed message={flights.error.message} onRetry={handleRetry} />
+            ) : flight ? (
+              <div ref={detailsRef} className="grid scroll-mt-4 gap-4">
+                <Button
+                  variant="ghost"
+                  onClick={() => setFlight(null)}
+                  className="w-fit rounded-2xl font-semibold"
+                >
+                  <ArrowLeft className="mr-1 h-4 w-4" />
+                  Назад к списку рейсов
+                </Button>
+                <FlightAnalytics
+                  flight={toAnalyticsFlight(flight, params.date)}
+                  date={params.date}
+                  source={searchSource}
+                />
+              </div>
+            ) : flights.data ? (
+              <FlightResults route={route} result={flights.data} onSelect={handleSelect} />
+            ) : null}
+          </div>
+        </section>
       </main>
 
       <footer className="border-t border-border px-4 py-8 text-center text-xs text-muted-foreground">

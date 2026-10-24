@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { SubscribeBlock } from "@/components/SubscribeBlock";
 import { RISK_LABEL, type Flight, type RiskLevel } from "@/lib/flight-data";
-import { reachGoal } from "@/lib/analytics";
+import { reachGoal, type SearchSource } from "@/lib/analytics";
 import type { LocalDate } from "@/lib/graphql-types";
 import { flightBotLink } from "@/lib/telegram-bot";
 
@@ -58,9 +58,10 @@ type Props = {
   flight: Flight;
   /** Дата вылета: в Flight её нет, а бот ждёт рейс вместе с датой. */
   date: LocalDate;
+  source: SearchSource;
 };
 
-export function FlightAnalytics({ flight, date }: Props) {
+export function FlightAnalytics({ flight, date, source }: Props) {
   const [openFactors, setOpenFactors] = useState(true);
   const risk = riskStyles[flight.risk.level];
   const RiskIcon = risk.icon;
@@ -201,8 +202,13 @@ export function FlightAnalytics({ flight, date }: Props) {
                 flight: flight.flightNumber,
                 risk_level: flight.risk.level,
                 risk_probability: flight.risk.probability,
+                source,
               })
-            : reachGoal("messenger_click", { messenger: channel, flight: flight.flightNumber })
+            : reachGoal("messenger_click", {
+                messenger: channel,
+                flight: flight.flightNumber,
+                source,
+              })
         }
       />
     </div>
