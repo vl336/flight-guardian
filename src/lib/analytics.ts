@@ -27,6 +27,8 @@ export type Goal =
   | "flight_open"
   /** Подписались на уведомления по рейсу (email валиден). */
   | "subscribe_email"
+  /** Нажали «Оформить» на тарифе страховки от задержки/отмены (plan: basic | premium). */
+  | "insurance_click"
   /** Переход в Telegram-бота или в Макс. */
   | "messenger_click"
   /** Сработал error boundary. */

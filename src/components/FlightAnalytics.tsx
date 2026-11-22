@@ -9,6 +9,7 @@ import {
   CalendarClock,
 } from "lucide-react";
 import { SubscribeBlock } from "@/components/SubscribeBlock";
+import { InsuranceOffer } from "@/components/InsuranceOffer";
 import { RISK_LABEL, type Flight, type RiskLevel } from "@/lib/flight-data";
 import { reachGoal } from "@/lib/analytics";
 import type { LocalDate } from "@/lib/graphql-types";
@@ -185,6 +186,12 @@ export function FlightAnalytics({ flight, date }: Props) {
           </ul>
         )}
       </div>
+
+      <InsuranceOffer
+        flightNumber={flight.flightNumber}
+        riskLevel={flight.risk.level}
+        riskProbability={flight.risk.probability}
+      />
 
       <SubscribeBlock
         title={`Следить за риском по рейсу ${flight.flightNumber}`}
