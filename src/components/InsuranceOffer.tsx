@@ -1,10 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { ShieldCheck, Check, Info, X } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { reachGoal } from "@/lib/analytics";
 import type { RiskLevel } from "@/lib/flight-data";
+import { cn } from "@/lib/utils";
 
 type Props = {
   /** Номер рейса попадает и в тексты, и в цель — без него тариф не оформить. */
@@ -21,6 +29,7 @@ type Props = {
 export function InsuranceOffer({ flightNumber, riskLevel, riskProbability }: Props) {
   const sectionRef = useRef<HTMLElement>(null);
   const [howOpen, setHowOpen] = useState(false);
+  const [leadOpen, setLeadOpen] = useState(false);
 
   // Показ = «viewable impression»: ≥50% блока в кадре ≥1 сек — случайный
   // проскок при прокрутке показом не станет. Один раз за открытую карточку,
@@ -60,9 +69,7 @@ export function InsuranceOffer({ flightNumber, riskLevel, riskProbability }: Pro
       risk_level: riskLevel,
       risk_probability: riskProbability,
     });
-    toast.success("Оформление скоро откроется", {
-      description: `Мы увидели ваш интерес к рейсу ${flightNumber} — это поможет нам быстрее запустить продажи.`,
-    });
+    setLeadOpen(true);
   };
 
   const handleHow = () => {
@@ -132,6 +139,13 @@ export function InsuranceOffer({ flightNumber, riskLevel, riskProbability }: Pro
       </div>
 
       {howOpen && <HowItWorks onClose={() => setHowOpen(false)} />}
+      <InsuranceLeadModal
+        open={leadOpen}
+        onOpenChange={setLeadOpen}
+        flightNumber={flightNumber}
+        riskLevel={riskLevel}
+        riskProbability={riskProbability}
+      />
     </section>
   );
 }
@@ -280,5 +294,187 @@ function Benefit({
         </p>
       </div>
     </li>
+  );
+}
+
+type LeadModalProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  flightNumber: string;
+  riskLevel: RiskLevel;
+  riskProbability: number;
+};
+
+/**
+ * Окно предзаказа со спецценой 349 ₽: собирает реальный интерес (Telegram/Email)
+ * и отправляет контакт сразу в Яндекс.Метрику и VK пиксель как параметр цели.
+ */
+function InsuranceLeadModal({
+  open,
+  onOpenChange,
+  flightNumber,
+  riskLevel,
+  riskProbability,
+}: LeadModalProps) {
+  const [channel, setChannel] = useState<"telegram" | "email">("telegram");
+  const [contact, setContact] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = contact.trim();
+    if (channel === "email") {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(clean)) {
+        setError("Введите корректный email (например name@example.com)");
+        return;
+      }
+    } else {
+      if (clean.length < 3) {
+        setError("Укажите @username или телефон в Telegram");
+        return;
+      }
+    }
+
+    reachGoal("insurance_lead_submit", {
+      flight: flightNumber,
+      contact: clean,
+      channel,
+      risk_level: riskLevel,
+      risk_probability: riskProbability,
+    });
+    setSubmitted(true);
+    setError("");
+  };
+
+  const handleClose = () => {
+    onOpenChange(false);
+    setTimeout(() => {
+      setSubmitted(false);
+      setContact("");
+      setError("");
+    }, 200);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-md rounded-3xl p-6 sm:p-7">
+        {!submitted ? (
+          <div>
+            <DialogHeader className="text-left">
+              <div className="flex items-center gap-2.5">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-sky-soft text-accent-foreground">
+                  <ShieldCheck className="h-5 w-5" />
+                </span>
+                <span className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
+                  Рейс {flightNumber}
+                </span>
+              </div>
+              <DialogTitle className="mt-3 text-xl font-extrabold sm:text-2xl">
+                Предзаказ страховки
+              </DialogTitle>
+              <DialogDescription className="mt-1 text-sm text-muted-foreground">
+                Оформление полисов на этот рейс запустится в ближайшие дни. Зафиксируйте спеццену до
+                старта продаж.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="mt-4 rounded-2xl border border-sky/30 bg-sky-soft p-4 text-accent-foreground">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-sm font-bold">Спеццена по предзаказу:</span>
+                <span className="text-xl font-black">
+                  349&nbsp;₽{" "}
+                  <span className="text-xs font-semibold text-muted-foreground line-through">
+                    599&nbsp;₽
+                  </span>
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-accent-foreground/80">
+                Скидка закрепится за вами. Оплата только при фактическом оформлении полиса.
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="mt-5 space-y-3">
+              <div className="flex gap-2 rounded-2xl bg-secondary/80 p-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChannel("telegram");
+                    setError("");
+                  }}
+                  className={cn(
+                    "flex-1 rounded-xl py-2 text-xs font-bold transition-all",
+                    channel === "telegram"
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  Telegram
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChannel("email");
+                    setError("");
+                  }}
+                  className={cn(
+                    "flex-1 rounded-xl py-2 text-xs font-bold transition-all",
+                    channel === "email"
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  Email
+                </button>
+              </div>
+
+              <div>
+                <Input
+                  value={contact}
+                  onChange={(e) => {
+                    setContact(e.target.value);
+                    if (error) setError("");
+                  }}
+                  type={channel === "email" ? "email" : "text"}
+                  placeholder={
+                    channel === "telegram" ? "@username или телефон" : "name@example.com"
+                  }
+                  autoFocus
+                  className="h-12 rounded-2xl border-border bg-secondary/40 px-3.5 text-base"
+                />
+                {error && <p className="mt-1.5 text-xs font-semibold text-danger">{error}</p>}
+              </div>
+
+              <Button type="submit" className="h-12 w-full rounded-2xl text-base font-bold">
+                Зафиксировать цену 349&nbsp;₽
+              </Button>
+
+              <p className="text-center text-xs text-muted-foreground">
+                Пришлём ссылку на оформление со скидкой, как только откроем доступ. Без спама.
+              </p>
+            </form>
+          </div>
+        ) : (
+          <div className="py-2 text-center">
+            <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-success-soft text-success">
+              <Check className="h-7 w-7" />
+            </span>
+            <h3 className="mt-4 text-xl font-black">Спеццена 349&nbsp;₽ зафиксирована!</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Мы привязали скидку к рейсу <strong>{flightNumber}</strong>. Как только откроется
+              оформление, персональная ссылка со скидкой придёт{" "}
+              {channel === "telegram" ? "вам в Telegram" : "на вашу почту"}.
+            </p>
+            <Button
+              onClick={handleClose}
+              className="mt-6 h-12 w-full rounded-2xl text-base font-bold"
+            >
+              Понятно
+            </Button>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
