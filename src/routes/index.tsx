@@ -56,7 +56,10 @@ function Index() {
     staleTime: 60 * 1000,
   });
 
-  const loading = params !== null && flights.isFetching;
+  // Данные с прошлого запроса — значит, рефетч фоновый: карточка и список
+  // остаются на местах, иначе сбрасывается попап страховки и заново
+  // стреляет insurance_view (цель должна быть одна на открытую карточку).
+  const loading = params !== null && flights.isFetching && !flights.data;
   const route = params ? `${params.from} → ${params.to}` : "";
 
   const handleSearch = (next: SearchParams) => {
