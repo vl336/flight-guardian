@@ -1,5 +1,5 @@
-import { useEffect, useRef, type ReactNode } from "react";
-import { Umbrella, Check, Info } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { ShieldCheck, Check, Info } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -71,7 +71,7 @@ export function InsuranceOffer({ flightNumber, riskLevel, riskProbability }: Pro
     >
       <div className="flex items-start gap-3">
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-sky-soft">
-          <Umbrella className="h-5 w-5 text-accent-foreground" />
+          <ShieldCheck className="h-5 w-5 text-accent-foreground" />
         </span>
         <div className="min-w-0">
           <h3 className="text-lg leading-tight font-extrabold">
@@ -88,16 +88,22 @@ export function InsuranceOffer({ flightNumber, riskLevel, riskProbability }: Pro
           599 ₽ <span className="text-xs font-semibold text-muted-foreground">/ рейс</span>
         </p>
         <TooltipProvider delayDuration={100}>
-          <ul className="mt-3 space-y-2.5 text-sm">
-            <Benefit tooltip="Ваучер на 500 ₽ придёт в приложение и будет ждать целый год: потратить его можно в кафе и магазинах любого аэропорта России — когда удобно, не обязательно прямо в этой поездке.">
-              Задержка от 30 минут — ваучер на еду на 500 ₽
-            </Benefit>
-            <Benefit tooltip="Моментальный возврат на карту ровно той суммы, что вы заплатили за страховку: эти 599 ₽ вернутся сами, без заявлений и ожиданий.">
-              Задержка от 1,5 часа — возврат 599 ₽ за страховку
-            </Benefit>
-            <Benefit tooltip="QR-код на проход в бизнес-зал не сгорит: примените его в любой момент — на этом рейсе или на любом следующем.">
-              Задержка от 2,5 часа — QR-код в бизнес-зал
-            </Benefit>
+          <ul className="mt-3 space-y-3 text-sm">
+            <Benefit
+              criterion="От 30 минут"
+              perk="Ваучер на еду, 500 ₽"
+              tooltip="Ваучер на 500 ₽ придёт в приложение и будет ждать целый год: потратить его можно в кафе и магазинах любого аэропорта России — когда удобно, не обязательно прямо в этой поездке."
+            />
+            <Benefit
+              criterion="От 1,5 часа"
+              perk="Возврат 599 ₽ за страховку"
+              tooltip="Моментальный возврат на карту ровно той суммы, что вы заплатили за страховку: эти 599 ₽ вернутся сами, без заявлений и ожиданий."
+            />
+            <Benefit
+              criterion="От 2,5 часа"
+              perk="QR-код в бизнес-зал"
+              tooltip="По QR-коду можно пройти в бизнес-зал аэропорта. Не обязательно сразу: код не сгорит — используйте его в этой поездке или в любой следующей."
+            />
           </ul>
         </TooltipProvider>
         <Button onClick={handlePlan} className="mt-4 h-11 w-full rounded-2xl font-bold">
@@ -108,17 +114,32 @@ export function InsuranceOffer({ flightNumber, riskLevel, riskProbability }: Pro
   );
 }
 
-function Benefit({ children, tooltip }: { children: ReactNode; tooltip: string }) {
+/**
+ * Ступень компенсации: слева плашкой — порог задержки (критерий), рядом текстом
+ * — сама плюшка, справа иконка с тултипом-подробностью.
+ */
+function Benefit({
+  criterion,
+  perk,
+  tooltip,
+}: {
+  criterion: string;
+  perk: string;
+  tooltip: string;
+}) {
   return (
     <li className="flex items-start gap-2">
-      <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-      <span className="min-w-0">{children}</span>
+      <Check className="mt-1 h-4 w-4 shrink-0 text-success" />
+      <span className="mt-0.5 shrink-0 whitespace-nowrap rounded-full bg-sky-soft px-2 py-0.5 text-xs font-bold text-accent-foreground">
+        {criterion}
+      </span>
+      <span className="min-w-0 flex-1">{perk}</span>
       <Tooltip>
         <TooltipTrigger asChild>
           <button
             type="button"
             aria-label="Подробнее об условии"
-            className="mt-0.5 shrink-0 text-muted-foreground transition-colors hover:text-foreground"
+            className="mt-1 shrink-0 text-muted-foreground transition-colors hover:text-foreground"
           >
             <Info className="h-4 w-4" />
           </button>
