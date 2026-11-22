@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { ShieldCheck, Check, Info } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { reachGoal } from "@/lib/analytics";
 import type { RiskLevel } from "@/lib/flight-data";
 
@@ -87,25 +87,23 @@ export function InsuranceOffer({ flightNumber, riskLevel, riskProbability }: Pro
         <p className="text-2xl font-black">
           599 ₽ <span className="text-xs font-semibold text-muted-foreground">/ рейс</span>
         </p>
-        <TooltipProvider delayDuration={100}>
-          <ul className="mt-3 space-y-3 text-sm">
-            <Benefit
-              criterion="От 30 минут"
-              perk="Ваучер на еду, 500 ₽"
-              tooltip="Ваучер на 500 ₽ придёт в приложение и будет ждать целый год: потратить его можно в кафе и магазинах любого аэропорта России — когда удобно, не обязательно прямо в этой поездке."
-            />
-            <Benefit
-              criterion="От 1,5 часа"
-              perk="Возврат 599 ₽ за страховку"
-              tooltip="Моментальный возврат на карту ровно той суммы, что вы заплатили за страховку: эти 599 ₽ вернутся сами, без заявлений и ожиданий."
-            />
-            <Benefit
-              criterion="От 2,5 часа"
-              perk="QR-код в бизнес-зал"
-              tooltip="По QR-коду можно пройти в бизнес-зал аэропорта. Не обязательно сразу: код не сгорит — используйте его в этой поездке или в любой следующей."
-            />
-          </ul>
-        </TooltipProvider>
+        <ul className="mt-3 space-y-3 text-sm">
+          <Benefit
+            criterion="От 30 минут"
+            perk="Ваучер на еду, 500 ₽"
+            tooltip="Ваучер на 500 ₽ придёт в приложение и будет ждать целый год: потратить его можно в кафе и магазинах любого аэропорта России — когда удобно, не обязательно прямо в этой поездке."
+          />
+          <Benefit
+            criterion="От 1,5 часа"
+            perk="Возврат 599 ₽ за страховку"
+            tooltip="Моментальный возврат на карту ровно той суммы, что вы заплатили за страховку: эти 599 ₽ вернутся сами, без заявлений и ожиданий."
+          />
+          <Benefit
+            criterion="От 2,5 часа"
+            perk="QR-код в бизнес-зал"
+            tooltip="По QR-коду можно пройти в бизнес-зал аэропорта. Не обязательно сразу: код не сгорит — используйте его в этой поездке или в любой следующей."
+          />
+        </ul>
         <Button onClick={handlePlan} className="mt-4 h-11 w-full rounded-2xl font-bold">
           Оформить страховку
         </Button>
@@ -115,8 +113,9 @@ export function InsuranceOffer({ flightNumber, riskLevel, riskProbability }: Pro
 }
 
 /**
- * Ступень компенсации: слева плашкой — порог задержки (критерий), рядом текстом
- * — сама плюшка, справа иконка с тултипом-подробностью.
+ * Ступень компенсации: сверху плашка с порогом задержки (критерий), под ней
+ * сама плюшка с иконкой ⓘ — поповер, а не hover-тултип, чтобы открывался
+ * тапом на телефоне (второй тап или клик мимо закрывают).
  */
 function Benefit({
   criterion,
@@ -128,26 +127,34 @@ function Benefit({
   tooltip: string;
 }) {
   return (
-    <li className="flex items-start gap-2">
-      <Check className="mt-1 h-4 w-4 shrink-0 text-success" />
-      <span className="mt-0.5 shrink-0 whitespace-nowrap rounded-full bg-sky-soft px-2 py-0.5 text-xs font-bold text-accent-foreground">
-        {criterion}
-      </span>
-      <span className="min-w-0 flex-1">{perk}</span>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            aria-label="Подробнее об условии"
-            className="mt-1 shrink-0 text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <Info className="h-4 w-4" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-72 text-sm leading-snug">
-          {tooltip}
-        </TooltipContent>
-      </Tooltip>
+    <li className="flex items-start gap-2.5">
+      <Check className="mt-1.5 h-4 w-4 shrink-0 text-success" />
+      <div className="min-w-0 flex-1">
+        <span className="inline-flex rounded-full bg-sky-soft px-2.5 py-1 text-xs font-bold text-accent-foreground">
+          {criterion}
+        </span>
+        <p className="mt-1.5 font-medium">
+          {perk}
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label="Подробнее об условии"
+                className="ml-1 inline-flex h-4 w-4 items-center justify-center align-[-2px] text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <Info className="h-4 w-4" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              side="top"
+              collisionPadding={12}
+              className="w-72 border-none bg-primary text-sm leading-snug text-primary-foreground"
+            >
+              {tooltip}
+            </PopoverContent>
+          </Popover>
+        </p>
+      </div>
     </li>
   );
 }
