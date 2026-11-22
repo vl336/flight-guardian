@@ -65,6 +65,15 @@ export function InsuranceOffer({ flightNumber, riskLevel, riskProbability }: Pro
     });
   };
 
+  const handleHow = () => {
+    reachGoal("insurance_how_click", {
+      flight: flightNumber,
+      risk_level: riskLevel,
+      risk_probability: riskProbability,
+    });
+    setHowOpen(true);
+  };
+
   return (
     <section
       ref={sectionRef}
@@ -108,7 +117,7 @@ export function InsuranceOffer({ flightNumber, riskLevel, riskProbability }: Pro
         </ul>
         <Button
           variant="outline"
-          onClick={() => setHowOpen(true)}
+          onClick={handleHow}
           className="mt-4 h-11 w-full rounded-2xl font-bold"
         >
           Как это работает
