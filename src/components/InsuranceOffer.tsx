@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { ShieldCheck, Check, Info } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ShieldCheck, Check, Info, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -20,6 +20,7 @@ type Props = {
  */
 export function InsuranceOffer({ flightNumber, riskLevel, riskProbability }: Props) {
   const sectionRef = useRef<HTMLElement>(null);
+  const [howOpen, setHowOpen] = useState(false);
 
   // Показ = «viewable impression»: ≥50% блока в кадре ≥1 сек — случайный
   // проскок при прокрутке показом не станет. Один раз за открытую карточку,
@@ -104,11 +105,125 @@ export function InsuranceOffer({ flightNumber, riskLevel, riskProbability }: Pro
             tooltip="По QR-коду можно пройти в бизнес-зал аэропорта. Не обязательно сразу: код не сгорит — используйте его в этой поездке или в любой следующей."
           />
         </ul>
-        <Button onClick={handlePlan} className="mt-4 h-11 w-full rounded-2xl font-bold">
+        <Button
+          variant="outline"
+          onClick={() => setHowOpen(true)}
+          className="mt-4 h-11 w-full rounded-2xl font-bold"
+        >
+          Как это работает
+        </Button>
+        <Button onClick={handlePlan} className="mt-2 h-11 w-full rounded-2xl font-bold">
           Оформить страховку
         </Button>
       </div>
+
+      {howOpen && <HowItWorks onClose={() => setHowOpen(false)} />}
     </section>
+  );
+}
+
+const HOW_STEPS = [
+  {
+    title: "Оформляете на рейс",
+    text: "Страховка привязывается к номеру рейса и дате вылета. Одна кнопка — без анкет и лишних данных.",
+  },
+  {
+    title: "Следим за задержкой сами",
+    text: "Расписание, цепочка бортов, аэропорт. Заявления и справки не нужны: задержку мы видим раньше вас.",
+  },
+  {
+    title: "От 30 минут — ваучер на еду",
+    text: "500 ₽ приходят в приложение и живут год: тратить можно в кафе и магазинах любого аэропорта России.",
+  },
+  {
+    title: "От 1,5 часа — возврат за страховку",
+    text: "Моментально возвращаем на карту те самые 599 ₽, что вы заплатили при оформлении.",
+  },
+  {
+    title: "От 2,5 часа — бизнес-зал",
+    text: "Приходит QR-код на проход. Он не сгорает: используйте его в этой поездке или в любой следующей.",
+  },
+];
+
+/**
+ * Попап «Как это работает» в стиле полноэкранной заставки: тёмный hero-фон,
+ * карточки-шаги с номерами и липкая кнопка снизу.
+ */
+function HowItWorks({ onClose }: { onClose: () => void }) {
+  // Под попапом лежит карточка рейса — не даём ей прокручиваться.
+  useEffect(() => {
+    const { overflow } = document.body.style;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = overflow;
+    };
+  }, []);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="how-it-works-title"
+      className="fixed inset-0 z-50 overflow-y-auto bg-hero text-primary-foreground"
+    >
+      <div className="mx-auto flex min-h-full max-w-3xl flex-col px-4 pt-6 sm:py-8">
+        <div className="flex items-center gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-primary-foreground/10">
+            <ShieldCheck className="h-5 w-5" />
+          </span>
+          <p className="text-lg font-extrabold">Airrisk</p>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Закрыть"
+            className="ml-auto grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-primary-foreground/10 transition-colors hover:bg-primary-foreground/20"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex flex-1 flex-col pt-8 sm:py-6">
+          <h2 id="how-it-works-title" className="text-3xl leading-tight font-black sm:text-4xl">
+            Как работает страховка
+          </h2>
+          <p className="mt-4 max-w-2xl text-base text-primary-foreground/75 sm:text-lg">
+            Оформляется на конкретный рейс за минуту — дальше всё происходит само, пока вы
+            собираетесь на рейс.
+          </p>
+
+          <ol className="mt-8 grid gap-3">
+            {HOW_STEPS.map((step, i) => (
+              <li
+                key={step.title}
+                className="flex items-start gap-3 rounded-3xl border border-primary-foreground/10 bg-primary-foreground/5 p-4"
+              >
+                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary-foreground/10 text-xs font-bold">
+                  {i + 1}
+                </span>
+                <div className="min-w-0">
+                  <p className="font-bold">{step.title}</p>
+                  <p className="mt-1 text-sm text-primary-foreground/70">{step.text}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          <p className="mt-6 inline-flex items-center gap-2 self-start rounded-full bg-primary-foreground/10 px-3 py-1.5 text-sm font-semibold">
+            Платим первыми — вы только показываете QR и садитесь за столик.
+          </p>
+        </div>
+
+        {/* Как и в заставке: на телефоне прибиваем кнопку к низу, чтобы не листать. */}
+        <div className="sticky bottom-0 -mx-4 mt-8 grid border-t border-primary-foreground/10 bg-navy/70 px-4 pt-4 pb-5 backdrop-blur-md sm:static sm:mx-0 sm:mt-8 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+          <Button
+            onClick={onClose}
+            className="h-14 w-full rounded-2xl text-base font-bold sm:w-fit sm:px-8"
+          >
+            Понятно
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
 
