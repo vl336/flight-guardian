@@ -1,7 +1,8 @@
 import { useEffect, useRef, type ReactNode } from "react";
-import { Umbrella, Check } from "lucide-react";
+import { Umbrella, Check, Info } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { reachGoal } from "@/lib/analytics";
 import type { RiskLevel } from "@/lib/flight-data";
 
@@ -52,9 +53,8 @@ export function InsuranceOffer({ flightNumber, riskLevel, riskProbability }: Pro
     };
   }, [flightNumber, riskLevel, riskProbability]);
 
-  const handlePlan = (plan: "basic" | "premium") => {
+  const handlePlan = () => {
     reachGoal("insurance_click", {
-      plan,
       flight: flightNumber,
       risk_level: riskLevel,
       risk_probability: riskProbability,
@@ -78,62 +78,55 @@ export function InsuranceOffer({ flightNumber, riskLevel, riskProbability }: Pro
             Страховка от задержки и отмены рейса
           </h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Выплата приходит на карту сама, без заявлений и справок. Оформляется на рейс{" "}
-            {flightNumber}.
+            Компенсации приходят сами, без заявлений и справок. Оформляется на рейс {flightNumber}.
           </p>
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <div className="flex flex-col rounded-3xl border border-border p-4">
-          <p className="text-sm font-bold">Базовый</p>
-          <p className="mt-1 text-2xl font-black">
-            399 ₽ <span className="text-xs font-semibold text-muted-foreground">/ рейс</span>
-          </p>
-          <ul className="mt-3 grow space-y-2 text-sm">
-            <Benefit>Задержка от 3 часов — 3 000 ₽</Benefit>
-            <Benefit>Отмена рейса — до 15 000 ₽ на новый билет</Benefit>
-            <Benefit>Следим за рейсом и платим сами</Benefit>
+      <div className="mt-4 rounded-3xl border border-border p-4 sm:p-5">
+        <p className="text-2xl font-black">
+          599 ₽ <span className="text-xs font-semibold text-muted-foreground">/ рейс</span>
+        </p>
+        <TooltipProvider delayDuration={100}>
+          <ul className="mt-3 space-y-2.5 text-sm">
+            <Benefit tooltip="Ваучер на 500 ₽ придёт в приложение и будет ждать целый год: потратить его можно в кафе и магазинах любого аэропорта России — когда удобно, не обязательно прямо в этой поездке.">
+              Задержка от 30 минут — ваучер на еду на 500 ₽
+            </Benefit>
+            <Benefit tooltip="Моментальный возврат на карту ровно той суммы, что вы заплатили за страховку: эти 599 ₽ вернутся сами, без заявлений и ожиданий.">
+              Задержка от 1,5 часа — возврат 599 ₽ за страховку
+            </Benefit>
+            <Benefit tooltip="QR-код на проход в бизнес-зал не сгорит: примените его в любой момент — на этом рейсе или на любом следующем.">
+              Задержка от 2,5 часа — QR-код в бизнес-зал
+            </Benefit>
           </ul>
-          <Button
-            variant="outline"
-            onClick={() => handlePlan("basic")}
-            className="mt-4 h-11 w-full rounded-2xl font-bold"
-          >
-            Оформить базовый
-          </Button>
-        </div>
-
-        <div className="relative flex flex-col rounded-3xl border-2 border-navy px-4 pt-5 pb-4">
-          <p className="absolute -top-3 left-4 rounded-full bg-navy px-2.5 py-0.5 text-xs font-bold text-primary-foreground">
-            Рекомендуем
-          </p>
-          <p className="text-sm font-bold">Премиум</p>
-          <p className="mt-1 text-2xl font-black">
-            899 ₽ <span className="text-xs font-semibold text-muted-foreground">/ рейс</span>
-          </p>
-          <ul className="mt-3 grow space-y-2 text-sm">
-            <Benefit>Задержка от 1 часа — 5 000 ₽</Benefit>
-            <Benefit>Отмена — 30 000 ₽ + гостиница и питание</Benefit>
-            <Benefit>Потеря багажа — 10 000 ₽</Benefit>
-          </ul>
-          <Button
-            onClick={() => handlePlan("premium")}
-            className="mt-4 h-11 w-full rounded-2xl font-bold"
-          >
-            Оформить премиум
-          </Button>
-        </div>
+        </TooltipProvider>
+        <Button onClick={handlePlan} className="mt-4 h-11 w-full rounded-2xl font-bold">
+          Оформить страховку
+        </Button>
       </div>
     </section>
   );
 }
 
-function Benefit({ children }: { children: ReactNode }) {
+function Benefit({ children, tooltip }: { children: ReactNode; tooltip: string }) {
   return (
     <li className="flex items-start gap-2">
       <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
       <span className="min-w-0">{children}</span>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label="Подробнее об условии"
+            className="mt-0.5 shrink-0 text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <Info className="h-4 w-4" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-72 text-sm leading-snug">
+          {tooltip}
+        </TooltipContent>
+      </Tooltip>
     </li>
   );
 }
