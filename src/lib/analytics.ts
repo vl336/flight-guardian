@@ -29,6 +29,11 @@ export type Goal =
   | "subscribe_email"
   /** Нажали «Оформить» на тарифе страховки от задержки/отмены (plan: basic | premium). */
   | "insurance_click"
+  /**
+   * Увидели блок страховки: ≥50% блока держится в кадре ≥1 сек, один раз за
+   * открытие карточки. Вместе с insurance_click даёт воронку «увидел → нажал».
+   */
+  | "insurance_view"
   /** Переход в Telegram-бота или в Макс. */
   | "messenger_click"
   /** Сработал error boundary. */

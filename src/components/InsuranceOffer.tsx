@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { Umbrella, Check } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,40 @@ type Props = {
  * оформление скоро откроется — так меряем спрос до запуска продаж.
  */
 export function InsuranceOffer({ flightNumber, riskLevel, riskProbability }: Props) {
+  const sectionRef = useRef<HTMLElement>(null);
+
+  // Показ = «viewable impression»: ≥50% блока в кадре ≥1 сек — случайный
+  // проскок при прокрутке показом не станет. Один раз за открытую карточку,
+  // чтобы воронка insurance_view → insurance_click не раздувалась.
+  useEffect(() => {
+    const node = sectionRef.current;
+    if (!node || typeof IntersectionObserver === "undefined") return;
+    let timer: number | undefined;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          timer ??= window.setTimeout(() => {
+            reachGoal("insurance_view", {
+              flight: flightNumber,
+              risk_level: riskLevel,
+              risk_probability: riskProbability,
+            });
+            observer.disconnect();
+          }, 1000);
+        } else {
+          window.clearTimeout(timer);
+          timer = undefined;
+        }
+      },
+      { threshold: 0.5 },
+    );
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(timer);
+    };
+  }, [flightNumber, riskLevel, riskProbability]);
+
   const handlePlan = (plan: "basic" | "premium") => {
     reachGoal("insurance_click", {
       plan,
@@ -31,7 +65,10 @@ export function InsuranceOffer({ flightNumber, riskLevel, riskProbability }: Pro
   };
 
   return (
-    <section className="rounded-3xl border border-border bg-card p-5 shadow-card sm:p-6">
+    <section
+      ref={sectionRef}
+      className="rounded-3xl border border-border bg-card p-5 shadow-card sm:p-6"
+    >
       <div className="flex items-start gap-3">
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-sky-soft">
           <Umbrella className="h-5 w-5 text-accent-foreground" />
