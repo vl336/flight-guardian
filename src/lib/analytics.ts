@@ -45,7 +45,12 @@ export type Goal =
   /** Открыли несуществующий адрес. */
   | "page_not_found";
 
-/** Параметры цели. Персональные данные (email) сюда не попадают. */
+/**
+ * Параметры цели. Персональные данные (email) сюда не попадают — исключение
+ * insurance_lead_submit: контакт и есть предмет замера, на время эксперимента
+ * без бэкенда Метрика работает лид-стореджем (лиды выгружать из отчёта
+ * «Параметры визитов»; в VK параметры события не видны).
+ */
 export type GoalParams = Record<string, string | number | boolean>;
 
 export function reachGoal(goal: Goal, params?: GoalParams): void {
