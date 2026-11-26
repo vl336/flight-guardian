@@ -1,5 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { ShieldCheck, Check, Info, X } from "lucide-react";
+import {
+  CalendarCheck,
+  Check,
+  CreditCard,
+  Info,
+  QrCode,
+  Radar,
+  ShieldCheck,
+  UtensilsCrossed,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -138,7 +148,7 @@ export function InsuranceOffer({ flightNumber, riskLevel, riskProbability }: Pro
         </Button>
       </div>
 
-      {howOpen && <HowItWorks onClose={() => setHowOpen(false)} />}
+      <HowItWorks open={howOpen} onOpenChange={setHowOpen} flightNumber={flightNumber} />
       <InsuranceLeadModal
         open={leadOpen}
         onOpenChange={setLeadOpen}
@@ -150,103 +160,157 @@ export function InsuranceOffer({ flightNumber, riskLevel, riskProbability }: Pro
   );
 }
 
-const HOW_STEPS = [
+const HOW_PROCESS = [
   {
+    icon: CalendarCheck,
     title: "Оформляете на рейс",
     text: "Страховка привязывается к номеру рейса и дате вылета.",
   },
   {
+    icon: Radar,
     title: "Следим за задержкой сами",
     text: "Заявления и обращения в поддержку не понадобятся: если рейс задержат, мы всё оформим сами и уведомим вас.",
   },
+];
+
+const HOW_PAYOUTS = [
   {
-    title: "От 30 минут — ваучер на еду",
+    icon: UtensilsCrossed,
+    threshold: "от 30 минут",
+    title: "Ваучер на еду",
     text: "В личном кабинете появится ваучер на 500\u00A0₽. Он действует год — потратить его можно в кафе или магазине любого аэропорта России.",
   },
   {
-    title: "От 1,5 часа — возврат за страховку",
+    icon: CreditCard,
+    threshold: "от 1,5 часа",
+    title: "Возврат за страховку",
     text: "На карту моментально вернутся 599\u00A0₽ — полная стоимость страховки.",
   },
   {
-    title: "От 2,5 часа — бизнес-зал",
+    icon: QrCode,
+    threshold: "от 2,5 часа",
+    title: "Бизнес-зал",
     text: "В личном кабинете можно получить QR-код на бизнес-зал. Он действует год — покажите его на входе в бизнес-зал любого аэропорта России.",
   },
 ];
 
-/**
- * Попап «Как это работает» в стиле полноэкранной заставки: тёмный hero-фон,
- * карточки-шаги с номерами и липкая кнопка снизу.
- */
-function HowItWorks({ onClose }: { onClose: () => void }) {
-  // Под попапом лежит карточка рейса — не даём ей прокручиваться.
-  useEffect(() => {
-    const { overflow } = document.body.style;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = overflow;
-    };
-  }, []);
+type HowItWorksProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  flightNumber: string;
+};
 
+/**
+ * Попап «Как это работает»: сверху компактный hero с фирменным градиентом,
+ * внутри — таймлайн (два шага подготовки и три выплаты по порогам задержки),
+ * снизу — итоговая цена и кнопка. Dialog от Radix даёт Esc, фокус-ловушку
+ * и блокировку прокрутки страницы под окном.
+ */
+function HowItWorks({ open, onOpenChange, flightNumber }: HowItWorksProps) {
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="how-it-works-title"
-      className="fixed inset-0 z-50 overflow-y-auto bg-hero text-primary-foreground"
-    >
-      <div className="mx-auto flex min-h-full max-w-3xl flex-col px-4 pt-6 sm:py-8">
-        <div className="flex items-center gap-3">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-primary-foreground/10">
-            <ShieldCheck className="h-5 w-5" />
-          </span>
-          <p className="text-lg font-extrabold">Airrisk</p>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {/* text-primary-foreground — цвет по умолчанию для hero; встроенный
+          крестик DialogContent прячем и рисуем свой на градиенте. */}
+      <DialogContent className="flex max-h-[calc(100dvh-1.5rem)] w-[calc(100%-1.5rem)] max-w-lg flex-col gap-0 overflow-hidden rounded-3xl p-0 text-primary-foreground sm:rounded-3xl [&>button]:hidden">
+        <div className="relative overflow-hidden bg-hero px-6 pt-7 pb-6">
+          <span
+            aria-hidden
+            className="absolute -top-14 -right-10 h-40 w-40 rounded-full bg-primary-foreground/15 blur-2xl"
+          />
+          <span
+            aria-hidden
+            className="absolute -bottom-16 -left-12 h-32 w-32 rounded-full bg-sky/50 blur-2xl"
+          />
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => onOpenChange(false)}
             aria-label="Закрыть"
-            className="ml-auto grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-primary-foreground/10 transition-colors hover:bg-primary-foreground/20"
+            className="absolute top-4 right-4 grid h-10 w-10 place-items-center rounded-2xl bg-primary-foreground/10 ring-1 ring-primary-foreground/15 transition-colors hover:bg-primary-foreground/20"
           >
             <X className="h-5 w-5" />
           </button>
-        </div>
-
-        <div className="flex flex-1 flex-col pt-8 sm:py-6">
-          <h2 id="how-it-works-title" className="text-3xl leading-tight font-black sm:text-4xl">
+          <span className="grid h-11 w-11 place-items-center rounded-2xl bg-primary-foreground/15 ring-1 ring-primary-foreground/20">
+            <ShieldCheck className="h-5 w-5" />
+          </span>
+          <DialogTitle className="mt-4 pr-8 text-2xl leading-tight font-black">
             Как работает страховка
-          </h2>
-          <p className="mt-4 max-w-2xl text-base text-primary-foreground/75 sm:text-lg">
-            Страховка оформляется на конкретный рейс. Дальше всё происходит автоматически.
-          </p>
-
-          <ol className="mt-8 grid gap-3">
-            {HOW_STEPS.map((step, i) => (
-              <li
-                key={step.title}
-                className="flex items-start gap-3 rounded-3xl border border-primary-foreground/10 bg-primary-foreground/5 p-4"
-              >
-                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary-foreground/10 text-xs font-bold">
-                  {i + 1}
-                </span>
-                <div className="min-w-0">
-                  <p className="font-bold">{step.title}</p>
-                  <p className="mt-1 text-sm text-primary-foreground/70">{step.text}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
+          </DialogTitle>
+          <DialogDescription className="mt-2 text-sm leading-relaxed text-primary-foreground/75">
+            Страховка оформляется на рейс {flightNumber}. Дальше всё происходит автоматически.
+          </DialogDescription>
         </div>
 
-        {/* Как и в заставке: на телефоне прибиваем кнопку к низу, чтобы не листать. */}
-        <div className="sticky bottom-0 -mx-4 mt-8 grid border-t border-primary-foreground/10 bg-navy/70 px-4 pt-4 pb-5 backdrop-blur-md sm:static sm:mx-0 sm:mt-8 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6 text-foreground">
+          <div className="relative">
+            {/* Линия таймлайна проходит за иконками: к выплатам становится
+                заметнее — чем дольше задержка, тем ценнее компенсация. */}
+            <span
+              aria-hidden
+              className="absolute top-4 bottom-4 left-[21px] w-0.5 rounded-full bg-gradient-to-b from-border via-sky/30 to-sky/60"
+            />
+            <ol className="space-y-5">
+              {HOW_PROCESS.map((step, i) => (
+                <li
+                  key={step.title}
+                  className="flex animate-in items-start gap-3.5 fade-in slide-in-from-bottom-2 [animation-fill-mode:both]"
+                  style={{ animationDelay: `${(i + 1) * 70}ms` }}
+                >
+                  <span className="relative z-10 grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-border bg-secondary">
+                    <step.icon className="h-5 w-5 text-muted-foreground" />
+                  </span>
+                  <div className="min-w-0 pt-0.5">
+                    <p className="text-[15px] font-bold">{step.title}</p>
+                    <p className="mt-1 text-sm leading-snug text-muted-foreground">{step.text}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+            <p className="pt-6 pb-1 pl-[58px] text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
+              Что вы получите
+            </p>
+            <ol className="space-y-5">
+              {HOW_PAYOUTS.map((step, i) => (
+                <li
+                  key={step.title}
+                  className="flex animate-in items-start gap-3.5 fade-in slide-in-from-bottom-2 [animation-fill-mode:both]"
+                  style={{ animationDelay: `${(i + 3) * 70}ms` }}
+                >
+                  <span className="relative z-10 grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-sky-soft ring-1 ring-sky/20">
+                    <step.icon className="h-5 w-5 text-accent-foreground" />
+                  </span>
+                  <div className="min-w-0 pt-0.5">
+                    <p className="text-[15px] font-bold">
+                      {step.title}
+                      <span className="ml-2 inline-flex rounded-full bg-sky-soft px-2 py-0.5 align-middle text-[11px] font-bold text-accent-foreground">
+                        {step.threshold}
+                      </span>
+                    </p>
+                    <p className="mt-1 text-sm leading-snug text-muted-foreground">{step.text}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 border-t border-border bg-secondary/40 px-6 py-4 text-foreground">
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+              Всё это за
+            </p>
+            <p className="text-lg leading-tight font-black">
+              599&nbsp;₽ <span className="text-xs font-semibold text-muted-foreground">/ рейс</span>
+            </p>
+          </div>
           <Button
-            onClick={onClose}
-            className="h-14 w-full rounded-2xl text-base font-bold sm:w-fit sm:px-8"
+            onClick={() => onOpenChange(false)}
+            className="h-12 shrink-0 rounded-2xl px-8 font-bold"
           >
             Понятно
           </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
